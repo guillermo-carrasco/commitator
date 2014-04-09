@@ -1,0 +1,2 @@
+"""Commitator main module
+"""
