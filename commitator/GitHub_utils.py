@@ -1,19 +1,23 @@
 """ Utils to interact with GitHub API
 """
 import requests
+import gevent
+
+from gevent import monkey; monkey.patch_all()
 
 from commitator import *
+
+params = {}
+if ACCESS_TOKEN:
+    params = {'access_token': ACCESS_TOKEN}
 
 #################################
 #  Organization level API info  #
 #################################
-params = {}
-if ACCESS_TOKEN:
-    params = {'access_token': ACCESS_TOKEN}
 def get_org_repos(org):
     """Return all repositories within an Organization
     """
-    return requests.get(GH_ORG_REPOS.format(org=org), params=params).json()
+    return requests.get(GH_ORG_REPOS.format(org=org), params=params, verify=False).json()
 
 
 def get_commits_org(org):
@@ -23,9 +27,11 @@ def get_commits_org(org):
     """
     repos = get_org_repos(org)
     result = {}
-    for repo in repos:
-        commits = len(get_commits_repo(org, repo['name']))
-        result[repo['name']] = commits
+    jobs = [gevent.spawn(get_commits_repo, org, repo['name']) for repo in repos]
+    gevent.joinall(jobs)
+    for job in jobs:
+        commits = len(job.value[1])
+        result[job.value[0]] = commits
     return result
 
 
@@ -37,4 +43,4 @@ def get_commits_org(org):
 def get_commits_repo(user, repo):
     """ Return the number of commits of the requested user's repository
     """
-    return requests.get(GH_REPO_COMMITS.format(user=user, repo=repo), params=params).json()
+    return (repo, requests.get(GH_REPO_COMMITS.format(user=user, repo=repo), params=params, verify=False).json())
