@@ -8,6 +8,7 @@
 <meta charset="utf-8">
 
 <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet">
+<link href="//cdnjs.cloudflare.com/ajax/libs/nvd3/1.1.15-beta/nv.d3.css" rel="stylesheet">
 <link rel="shortcut icon" href="{{ url_for('static', filename='ico/favicon.ico') }}">
 </head>
 <body>
@@ -24,9 +25,9 @@
       <a class="navbar-brand" href="https://github.com/guillermo-carrasco/commitator">Welcome to Commitator!</a>
     </div>
     <div class="navbar-collapse collapse">
-      <form class="navbar-form navbar-right" role="form">
+      <form class="navbar-form navbar-right" role="form" id='org_form'>
         <div class="form-group">
-          <input type="text" placeholder="GitHub organization..." class="form-control">
+          <input type="text" placeholder="GitHub organization..." class="form-control" id="org_field">
         </div>
         <button type="submit" class="btn btn-success">Fetch data</button>
       </form>
@@ -43,13 +44,18 @@
   <hr />
   {% block footer %}
   <footer class="footer">
-    <p>Commitator: A WebApp by <a href="mailto:guille.ch.88@gmail.com">Guillermo Carraso</a></p>
+    <p>Commitator: A WebApp by <a href="https://www.linkedin.com/in/guillermocarrasco">Guillermo Carraso</a></p>
   </footer>
   {% endblock %}
 </div>
 {% block js_footer %}
+<!-- Include Bootstrap and nvd3 javascript -->
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
 <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.4.5/d3.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/nvd3/1.1.15-beta/nv.d3.js"></script>
+
+<!-- Custom JavaScript and -->
 <script src="/static/js/commitator.js"></script>
 <script src="/static/js/GitHub.js"></script>
 {% endblock %}
