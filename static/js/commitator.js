@@ -62,10 +62,11 @@ function build_discrete_bar_chart(data) {
     .staggerLabels(true)
     .tooltips(true)
     .showValues(true)
+    .margin({bottom: 200});
 
     d3.select('#main_chart svg')
     .datum(data)
-    .transition().duration(500)
+    .transition().duration(1000)
     .call(chart)
     ;
 
