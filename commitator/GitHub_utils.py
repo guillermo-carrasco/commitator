@@ -32,6 +32,8 @@ def get_commits_org(org):
 #################################
 #  Repository level API info  #
 #################################
+
+#XXX Get paginated data!
 def get_commits_repo(user, repo):
     """ Return the number of commits of the requested user's repository
     """
