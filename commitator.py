@@ -1,7 +1,8 @@
 import os
-from flask import Flask, Response, render_template, send_from_directory
+import flask
+from flask import Flask, Response, render_template, send_from_directory, request
 
-from commitator import *
+from commitator import GitHub_utils
 
 # initialization
 app = Flask(__name__, static_url_path='/static')
@@ -12,10 +13,14 @@ app.config.update(
 #############
 # API calls #
 #############
-@app.route('/api/repos')
-def det_org_repos(org):
-  """Return a JSON file with information of the organization's repositories
+@app.route('/api/org/commits', methods=['GET'])
+def det_org_repos():
+  """Return a JSON file with a summary of commits per repository within
+
+  the organization
   """
+  org = request.args.get('org', '')
+  return flask.jsonify(GitHub_utils.get_commits_org(org))
 
 # controllers
 @app.route('/favicon.ico')

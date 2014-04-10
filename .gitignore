@@ -2,3 +2,4 @@
 Commitator.egg-info
 build
 dist
+*pyc

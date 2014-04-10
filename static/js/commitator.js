@@ -3,23 +3,18 @@
 ////////////////////////////////////
 
 function get_org_repos(org) {
-  $.getJSON(GH_ORG_REPOS.replace('{org}', org), function(data) {
-    var chart_data = {};
-    chart_data['key'] = "Total number of commits per repository";
-    chart_data['values'] = [];
-    //Iterate over all repositories
-    $.each(data, function(_, repo){
-      var value = {"label": repo['name']};
-      // Get the length of the first pages of commits
-      $.getJSON(repo['commits_url'].replace('{/sha}', ''), function(data) {
-        value['value'] = data.length;
-        chart_data['values'].push(value);
-        build_discrete_bar_chart([chart_data]);
-      });
+  $.getJSON('/api/org/commits?org=' + org, function(data) {
+    //Prepare the data for the nvd3 plot
+    chart_data = {'key': 'Total commits per repository', 'values': []};
+    $.each(data, function(k, v) {
+      var value = {};
+      value['label'] = k;
+      value['value'] = v;
+      chart_data['values'].push(value);
     });
+    build_discrete_bar_chart([chart_data]);
   });
 }
-
 
 
 ///////////////////////////
