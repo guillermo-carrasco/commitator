@@ -16,7 +16,7 @@ myApp = myApp || (function () {
   };
 })();
 
-function get_org_repos(org) {
+function get_org_repos(chart_id, org) {
   myApp.showPleaseWait();
   $.getJSON('/api/org/commits?org=' + org, function(data) {
     //Prepare the data for the nvd3 plot
@@ -27,7 +27,7 @@ function get_org_repos(org) {
       value['value'] = v;
       chart_data['values'].push(value);
     });
-    build_discrete_bar_chart([chart_data]);
+    build_discrete_bar_chart(chart_id, [chart_data]);
   });
 }
 
@@ -44,7 +44,7 @@ function update_all(org) {
 
 //Updates the chart representing commits by user (first page returned by GH API)
 function update_global_commits_per_repo(org) {
-  var repos = get_org_repos(org);
+  var repos = get_org_repos('total_commits_chart', org);
 }
 
 
@@ -53,7 +53,7 @@ function update_global_commits_per_repo(org) {
 //  Drawing methods  //
 //////////////////////
 
-function build_discrete_bar_chart(data) {
+function build_discrete_bar_chart(chart_id, data) {
   myApp.hidePleaseWait();
   nv.addGraph(function() {
     var chart = nv.models.discreteBarChart()
@@ -62,19 +62,38 @@ function build_discrete_bar_chart(data) {
     .staggerLabels(true)
     .tooltips(true)
     .showValues(true)
-    .margin({bottom: 200});
+    .height(600)
+    .margin({bottom: 60});
 
-    d3.select('#main_chart svg')
+    d3.select('#' + chart_id + ' svg')
     .datum(data)
     .transition().duration(1000)
     .call(chart)
-    ;
+    .attr('style', 'height:600');
 
   nv.utils.windowResize(chart.update);
 
   return chart;
   });
 }
+
+$('#reportrange').daterangepicker(
+    {
+      ranges: {
+      'Today': [moment(), moment()],
+      'Yesterday': [moment().subtract('days', 1), moment().subtract('days', 1)],
+      'Last 7 Days': [moment().subtract('days', 7), moment()],
+      'Last 30 Days': [moment().subtract('days', 30), moment()],
+      'This Month': [moment().startOf('month'), moment().endOf('month')],
+      'Last Month': [moment().subtract('month', 1).startOf('month'), moment().subtract('month', 1).endOf('month')]
+      },
+      startDate: moment().subtract('days', 29),
+      endDate: moment()
+      },
+      function(start, end) {
+        $('#reportrange span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
+      }
+);
 
 
 //////////////////////////

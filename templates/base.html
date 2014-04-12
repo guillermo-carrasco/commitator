@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="en">
 <head>
 <title>Commitator</title>
@@ -7,22 +7,22 @@
 <meta name="author" content="Guillermo Carrasco">
 <meta charset="utf-8">
 
+<!-- CSS includes -->
 <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet">
 <link href="//cdnjs.cloudflare.com/ajax/libs/nvd3/1.1.15-beta/nv.d3.css" rel="stylesheet">
 <link href="http://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css" rel="stylesheet">
 <link href="{{ url_for('static', filename='css/daterangepicker-bs3.css') }}" rel="stylesheet">
-<!-- Include Bootstrap and nvd3 javascript -->
+
+<!-- Javascript includes -->
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
 <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.4.5/d3.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/nvd3/1.1.15-beta/nv.d3.js"></script>
-
-<!-- Custom JavaScript and -->
-<script src="/static/js/commitator.js"></script>
-<script src="/static/js/GitHub.js"></script>
 <script src="/static/js/moment.js"></script>
 <script src="/static/js/daterangepicker.js"></script>
+
 <link rel="shortcut icon" href="{{ url_for('static', filename='ico/favicon.ico') }}">
+
 </head>
 <body>
 {% block navbar %}
@@ -58,28 +58,10 @@
   {% block footer %}
   <footer class="footer">
     <p>Commitator: A WebApp by <a href="https://www.linkedin.com/in/guillermocarrasco">Guillermo Carraso</a></p>
+    <!-- Commitator JS -->
+    <script src="/static/js/commitator.js"></script>
   </footer>
   {% endblock %}
 </div>
-
-<script type="text/javascript">
-$('#reportrange').daterangepicker(
-    {
-      ranges: {
-      'Today': [moment(), moment()],
-      'Yesterday': [moment().subtract('days', 1), moment().subtract('days', 1)],
-      'Last 7 Days': [moment().subtract('days', 7), moment()],
-      'Last 30 Days': [moment().subtract('days', 30), moment()],
-      'This Month': [moment().startOf('month'), moment().endOf('month')],
-      'Last Month': [moment().subtract('month', 1).startOf('month'), moment().subtract('month', 1).endOf('month')]
-      },
-      startDate: moment().subtract('days', 29),
-      endDate: moment()
-      },
-      function(start, end) {
-        $('#reportrange span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
-      }
-);
-</script>
 </body>
 </html>
