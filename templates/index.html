@@ -3,15 +3,26 @@
 {% block content %}
 <h1>Welcome to Commitator!</h1>
 <p>
-With this web app, you can see some information about your GitHub organization
-in a very cool way! Try it out right now, just introduce the name of your GitHub
-organization in the box on the top-right corner, and enjoy!
+  With this web app, you can see some information about your GitHub organization
+  in a very cool way! Try it out right now, just introduce the name of your GitHub
+  organization in the box on the top-right corner, and enjoy!
 </p>
-<div class="well" style="overflow: auto">
-  <div id="reportrange">
+<div class="well container" style="overflow: auto">
+  <div class="col-md-2"></div>
+  <div id="reportrange" class="col-md-4" style="padding-top: 8px">
     <i class="fa fa-calendar fa-lg"></i>
     <span name="date_span">Pick up a time period (dafault is last 7 days)</span><b class="caret"></b>
   </div>
+  <div class="col-md-4">
+    <form class="form-inline" role="form" id="org_form">
+      <div class="form-group" id="org_field_div">
+        <label class="sr-only" for="inputError1">GitHub organization...</label>
+        <input class="form-control" id="org_field" placeholder="GitHub organization...">
+      </div>
+      <button type="submit" class="btn btn-success">Fetch data!</button>
+    </form>
+  </div>
+  <div class="col-md-2"></div>
 </div>
 <hr />
 <!-- Total commits per repository graph -->

@@ -41,21 +41,26 @@ function get_org_repos(chart_id, since, until, org) {
 ///////////////////////////
 function update_all() {
   var org = document.getElementById('org_field').value;
+  if (org) {
+    // Pick up the data from the datarange widget. If no value (<span> starts with
+    // Pick...), then by default get the last 7 days
+    var datarange = $('#reportrange span')[0]
+    var since = new Date();
+    var until = new Date();
+    if(datarange.textContent[0] != 'P') {
+      since = new Date(datarange.textContent.split(' - ')[0]);
+      until = new Date(datarange.textContent.split(' - ')[1]);
+    }
+    else {
+      since.setDate(until.getDate() - 7);
+    }
 
-  // Pick up the data from the datarange widget. If no value (<span> starts with
-  // Pick...), then by default get the last 7 days
-  var datarange = $('#reportrange span')[0]
-  var since = new Date();
-  var until = new Date();
-  if(datarange.textContent[0] != 'P') {
-    since = new Date(datarange.textContent.split(' - ')[0]);
-    until = new Date(datarange.textContent.split(' - ')[1]);
+    update_global_commits_per_repo(since, until, org);
+    //$("#total_commits_chart").insertBefore('<h2>Total number of commits per repository</h2>')
   }
   else {
-    since.setDate(until.getDate() - 7);
+    $("#org_field_div").addClass("has-error");
   }
-
-  update_global_commits_per_repo(since, until, org);
 }
 
 
@@ -121,3 +126,6 @@ $("#org_form").submit( function(e) {
   update_all();
 });
 
+$("#org_field").keyup(function(e){
+  $("#org_field_div").removeClass('has-error');
+});

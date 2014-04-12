@@ -1,67 +1,61 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<title>Commitator</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Simple WebApp to show some GitHub stats on a nice way">
-<meta name="author" content="Guillermo Carrasco">
-<meta charset="utf-8">
+  <title>Commitator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Simple WebApp to show some GitHub stats on a nice way">
+  <meta name="author" content="Guillermo Carrasco">
+  <meta charset="utf-8">
 
-<!-- CSS includes -->
-<link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet">
-<link href="//cdnjs.cloudflare.com/ajax/libs/nvd3/1.1.15-beta/nv.d3.css" rel="stylesheet">
-<link href="http://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css" rel="stylesheet">
-<link href="{{ url_for('static', filename='css/daterangepicker-bs3.css') }}" rel="stylesheet">
+  <!-- CSS includes -->
+  <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet">
+  <link href="//cdnjs.cloudflare.com/ajax/libs/nvd3/1.1.15-beta/nv.d3.css" rel="stylesheet">
+  <link href="http://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/daterangepicker-bs3.css') }}" rel="stylesheet">
 
-<!-- Javascript includes -->
-<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-<script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
-<script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.4.5/d3.js"></script>
-<script src="//cdnjs.cloudflare.com/ajax/libs/nvd3/1.1.15-beta/nv.d3.js"></script>
-<script src="/static/js/moment.js"></script>
-<script src="/static/js/daterangepicker.js"></script>
+  <!-- Javascript includes -->
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+  <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.4.5/d3.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/nvd3/1.1.15-beta/nv.d3.js"></script>
+  <script src="/static/js/moment.js"></script>
+  <script src="/static/js/daterangepicker.js"></script>
 
-<link rel="shortcut icon" href="{{ url_for('static', filename='ico/favicon.ico') }}">
-
+  <link rel="shortcut icon" href="{{ url_for('static', filename='ico/favicon.ico') }}">
+  
 </head>
 <body>
-{% block navbar %}
-<div class="navbar navbar-inverse navbar-static-top navbar-default" role="navigation">
-  <div class="container">
-    <div class="navbar-header">
-      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-        <span class="sr-only">Toggle navigation</span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-      </button>
-      <a class="navbar-brand" href="https://github.com/guillermo-carrasco/commitator">Welcome to Commitator!</a>
+  {% block navbar %}
+  <div class="navbar navbar-inverse navbar-static-top navbar-default" role="navigation">
+    <div class="container">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="https://github.com/guillermo-carrasco/commitator">Welcome to Commitator!</a>
+      </div>
     </div>
-    <div class="navbar-collapse collapse">
-      <form class="navbar-form navbar-right" role="form" id='org_form'>
-        <div class="form-group">
-          <input type="text" placeholder="GitHub organization..." class="form-control" id="org_field">
-        </div>
-        <button type="submit" class="btn btn-success">Fetch data</button>
-      </form>
-    </div><!--/.navbar-collapse -->
   </div>
-</div>
-{% endblock %}
+  {% endblock %}
 
-<div class="container page">
-  <div class="content">
-    {% block content %}
+  <div class="container page">
+    <div class="content">
+      {% block content %}
+      {% endblock %}
+    </div>
+    <hr />
+    {% block footer %}
+    <footer class="footer">
+      <p>Commitator: A WebApp by <a href="https://www.linkedin.com/in/guillermocarrasco">Guillermo Carraso</a></p>
+      <!-- Commitator JS -->
+      <script src="/static/js/commitator.js"></script>
+    </footer>
     {% endblock %}
   </div>
-  <hr />
-  {% block footer %}
-  <footer class="footer">
-    <p>Commitator: A WebApp by <a href="https://www.linkedin.com/in/guillermocarrasco">Guillermo Carraso</a></p>
-    <!-- Commitator JS -->
-    <script src="/static/js/commitator.js"></script>
-  </footer>
-  {% endblock %}
-</div>
 </body>
+<!-- Fork me of GitHub ribbon -->
+<a href="https://github.com/guillermo-carrasco/commitator"><img style="position: absolute; top: 0; right: 0; border: 0; z-index: 2000" src="https://camo.githubusercontent.com/365986a132ccd6a44c23a9169022c0b5c890c387/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f7265645f6161303030302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png"></a>
 </html>
