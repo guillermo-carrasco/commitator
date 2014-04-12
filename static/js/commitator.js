@@ -16,7 +16,7 @@ myApp = myApp || (function () {
   };
 })();
 
-function get_org_repos(chart_id, since, until, org) {
+function get_commits_per_repo(chart_id, since, until, org) {
   myApp.showPleaseWait();
   var get_commits_uri = '/api/org/commits?org=' + org;
   if (since && until) {
@@ -26,10 +26,13 @@ function get_org_repos(chart_id, since, until, org) {
     //Prepare the data for the nvd3 plot
     chart_data = {'key': 'Total commits per repository', 'values': []};
     $.each(data, function(k, v) {
-      var value = {};
-      value['label'] = k;
-      value['value'] = v;
-      chart_data['values'].push(value);
+      //Omit repositories without commits
+      if (v) {
+        var value = {};
+        value['label'] = k;
+        value['value'] = v;
+        chart_data['values'].push(value);
+      }
     });
     build_discrete_bar_chart(chart_id, [chart_data]);
   });
@@ -56,7 +59,7 @@ function update_all() {
     }
 
     update_global_commits_per_repo(since, until, org);
-    //$("#total_commits_chart").insertBefore('<h2>Total number of commits per repository</h2>')
+    $("#total_commits_chart").prepend("<h2>Total number of commits per repository</h2>")
   }
   else {
     $("#org_field_div").addClass("has-error");
@@ -66,7 +69,7 @@ function update_all() {
 
 //Updates the chart representing commits by user (first page returned by GH API)
 function update_global_commits_per_repo(since, until, org) {
-  var repos = get_org_repos('total_commits_chart', since, until, org);
+  var repos = get_commits_per_repo('total_commits_chart', since, until, org);
 }
 
 
