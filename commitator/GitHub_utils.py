@@ -20,14 +20,14 @@ def get_org_repos(org):
     return requests.get(GH_ORG_REPOS.format(org=org), params=params, verify=False).json()
 
 
-def get_commits_org(org):
+def get_commits_org(org, since, until):
     """ Returns a list of repository: #commits for all the repositories
 
-    in the organization.
+    in the organization within the specified dates.
     """
     repos = get_org_repos(org)
     result = {}
-    jobs = [gevent.spawn(get_commits_repo, org, repo['name']) for repo in repos]
+    jobs = [gevent.spawn(get_commits_repo, org, repo['name'], since, until) for repo in repos]
     gevent.joinall(jobs)
     for job in jobs:
         commits = len(job.value[1])
@@ -40,7 +40,9 @@ def get_commits_org(org):
 #################################
 
 #XXX Get paginated data!
-def get_commits_repo(user, repo):
+def get_commits_repo(user, repo, since, until):
     """ Return the number of commits of the requested user's repository
     """
+    params['since'] = since
+    params['until'] = until
     return (repo, requests.get(GH_REPO_COMMITS.format(user=user, repo=repo), params=params, verify=False).json())

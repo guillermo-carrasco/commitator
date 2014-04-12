@@ -20,7 +20,9 @@ def det_org_repos():
   the organization
   """
   org = request.args.get('org', '')
-  return flask.jsonify(GitHub_utils.get_commits_org(org))
+  since = request.args.get('since', False)
+  until = request.args.get('until', False)
+  return flask.jsonify(GitHub_utils.get_commits_org(org, since, until))
 
 # controllers
 @app.route('/favicon.ico')

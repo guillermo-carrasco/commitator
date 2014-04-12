@@ -16,9 +16,13 @@ myApp = myApp || (function () {
   };
 })();
 
-function get_org_repos(chart_id, org) {
+function get_org_repos(chart_id, since, until, org) {
   myApp.showPleaseWait();
-  $.getJSON('/api/org/commits?org=' + org, function(data) {
+  var get_commits_uri = '/api/org/commits?org=' + org;
+  if (since && until) {
+    get_commits_uri += '&since=' + since + '&until=' + until;
+  }
+  $.getJSON(get_commits_uri, function(data) {
     //Prepare the data for the nvd3 plot
     chart_data = {'key': 'Total commits per repository', 'values': []};
     $.each(data, function(k, v) {
@@ -35,24 +39,35 @@ function get_org_repos(chart_id, org) {
 ///////////////////////////
 //  Update info methods  //
 ///////////////////////////
+function update_all() {
+  var org = document.getElementById('org_field').value;
 
+  // Pick up the data from the datarange widget. If no value (<span> starts with
+  // Pick...), then by default get the last 7 days
+  var datarange = $('#reportrange span')[0]
+  var since = new Date();
+  var until = new Date();
+  if(datarange.textContent[0] != 'P') {
+    since = new Date(datarange.textContent.split(' - ')[0]);
+    until = new Date(datarange.textContent.split(' - ')[1]);
+  }
+  else {
+    since.setDate(until.getDate() - 7);
+  }
 
-function update_all(org) {
-  update_global_commits_per_repo(org);
+  update_global_commits_per_repo(since, until, org);
 }
 
 
 //Updates the chart representing commits by user (first page returned by GH API)
-function update_global_commits_per_repo(org) {
-  var repos = get_org_repos('total_commits_chart', org);
+function update_global_commits_per_repo(since, until, org) {
+  var repos = get_org_repos('total_commits_chart', since, until, org);
 }
-
 
 
 ///////////////////////
 //  Drawing methods  //
 //////////////////////
-
 function build_discrete_bar_chart(chart_id, data) {
   myApp.hidePleaseWait();
   nv.addGraph(function() {
@@ -77,6 +92,7 @@ function build_discrete_bar_chart(chart_id, data) {
   });
 }
 
+//Datarange picker 
 $('#reportrange').daterangepicker(
     {
       ranges: {
@@ -92,6 +108,7 @@ $('#reportrange').daterangepicker(
       },
       function(start, end) {
         $('#reportrange span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
+        update_all();
       }
 );
 
@@ -99,9 +116,8 @@ $('#reportrange').daterangepicker(
 //////////////////////////
 //  Responsive methods  //
 //////////////////////////
-
 $("#org_form").submit( function(e) {
   e.preventDefault();
-  var org = document.getElementById('org_field').value;
-  update_all(org);
+  update_all();
 });
+
