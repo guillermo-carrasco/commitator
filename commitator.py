@@ -10,11 +10,23 @@ app.config.update(
     DEBUG = True,
 )
 
+###############################
+# Cache-ish to save API calls #
+###############################
+class InfoCache(dict):
+  """ Store information already fetched from GitHub.
+  """
+  def __init__(self):
+    self.org = None
+    self.since = None
+    self.until = None
+
+
 #############
 # API calls #
 #############
 @app.route('/api/org/commits', methods=['GET'])
-def det_org_repos():
+def get_org_repos():
   """Return a JSON file with a summary of commits per repository within
 
   the organization

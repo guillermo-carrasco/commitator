@@ -27,10 +27,10 @@ function get_commits_per_repo(chart_id, since, until, org) {
     chart_data = {'key': 'Total commits per repository', 'values': []};
     $.each(data, function(k, v) {
       //Omit repositories without commits
-      if (v) {
+      if (v.length) {
         var value = {};
         value['label'] = k;
-        value['value'] = v;
+        value['value'] = v.length;
         chart_data['values'].push(value);
       }
     });
@@ -59,10 +59,13 @@ function update_all() {
     }
 
     update_global_commits_per_repo(since, until, org);
-    $("#total_commits_chart").prepend("<h2>Total number of commits per repository</h2>")
+    if (!document.getElementById("h_total_commits")) {
+      $("#total_commits_chart").prepend("<h2 id=\"h_total_commits\">Total number of commits per repository</h2>")
+    }
   }
   else {
     $("#org_field_div").addClass("has-error");
+    $('#org_field').popover('show');
   }
 }
 
@@ -109,7 +112,9 @@ $('#reportrange').daterangepicker(
       'Last 7 Days': [moment().subtract('days', 7), moment()],
       'Last 30 Days': [moment().subtract('days', 30), moment()],
       'This Month': [moment().startOf('month'), moment().endOf('month')],
-      'Last Month': [moment().subtract('month', 1).startOf('month'), moment().subtract('month', 1).endOf('month')]
+      'Last Month': [moment().subtract('month', 1).startOf('month'), moment().subtract('month', 1).endOf('month')],
+      'This Year': [moment().startOf('year'), moment().endOf('month')],
+      'Last Year': [moment().subtract('year', 1).startOf('year'), moment().subtract('year', 1).endOf('year')]
       },
       startDate: moment().subtract('days', 29),
       endDate: moment()
@@ -131,4 +136,5 @@ $("#org_form").submit( function(e) {
 
 $("#org_field").keyup(function(e){
   $("#org_field_div").removeClass('has-error');
+  $('#org_field').popover('hide');
 });
