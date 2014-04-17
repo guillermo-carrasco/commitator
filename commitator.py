@@ -1,4 +1,5 @@
 import os
+
 import flask
 from flask import Flask, Response, render_template, send_from_directory, request
 
@@ -10,23 +11,32 @@ app.config.update(
     DEBUG = True,
 )
 
-###############################
-# Cache-ish to save API calls #
-###############################
-class InfoCache(dict):
-  """ Store information already fetched from GitHub.
-  """
-  def __init__(self):
-    self.org = None
-    self.since = None
-    self.until = None
-
-
 #############
 # API calls #
 #############
-@app.route('/api/org/commits', methods=['GET'])
+@app.route('/api/org')
+def get_org_basic_info():
+  """ Returns basic info from the organization
+  """
+  org = request.args.get('org', '')
+  return flask.jsonify(GitHub_utils.get_org_basic_info(org))
+
+@app.route('/api/org/repos')
 def get_org_repos():
+  """Return a JSON file with the repositories of the organization
+  """
+  org = request.args.get('org', '')
+  return flask.jsonify(GitHub_utils.get_org_repos(org))
+
+@app.route('/api/org/members')
+def get_org_members():
+  """ Returns a JSON file with the members of the organization
+  """
+  org = request.args.get('org', '')
+  return flask.jsonify(GitHub_utils.get_org_members(org))
+
+@app.route('/api/org/repos/commits', methods=['GET'])
+def get_org_total_commits():
   """Return a JSON file with a summary of commits per repository within
 
   the organization
@@ -36,7 +46,9 @@ def get_org_repos():
   until = request.args.get('until', False)
   return flask.jsonify(GitHub_utils.get_commits_org(org, since, until))
 
-# controllers
+###############
+# controllers #
+###############
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'), 'ico/favicon.ico')

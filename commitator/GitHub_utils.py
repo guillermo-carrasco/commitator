@@ -32,17 +32,43 @@ def get_next_page(request):
 #################################
 #  Organization level API info  #
 #################################
+def get_org_basic_info(org):
+    """ Returns basic information of the organization
+    """
+    r = requests.get(GH_ORG.format(org=org))
+    return r.json()
+
+def get_org_members(org):
+    """ Return all members for an organization
+    """
+    r = requests.get(GH_ORG_MEMBERS.format(org=org), params=params)
+    members = r.json()
+    next = get_next_page(r)
+    while next:
+        r = requests.get(next, params=params)
+        members.extend(r.json())
+        next = get_next_page(r)
+    result = {}
+    for member in members:
+        result[member['id']] = member
+    return result
+
+
 def get_org_repos(org):
     """Return all repositories within an Organization
     """
     r = requests.get(GH_ORG_REPOS.format(org=org), params=params)
     repos = r.json()
+    result = {}
+    for repo in r.json():
+        result[repo['name']] = repo
     next = get_next_page(r)
     while next:
         r = requests.get(next, params=params)
-        repos += r.json()
+        for repo in r.json():
+            result[repo['name']] = repo
         next = get_next_page(r)
-    return repos
+    return result
 
 
 def get_commits_org(org, since, until):
@@ -52,7 +78,7 @@ def get_commits_org(org, since, until):
     """
     repos = get_org_repos(org)
     result = {}
-    jobs = [gevent.spawn(get_commits_repo, org, repo['name'], since, until) for repo in repos]
+    jobs = [gevent.spawn(get_commits_repo, org, repo, since, until) for repo, info in repos.items()]
     gevent.joinall(jobs)
     for job in jobs:
         commits = job.value[1]

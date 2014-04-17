@@ -12,13 +12,12 @@ myApp = myApp || (function () {
       hidePleaseWait: function () {
         pleaseWaitDiv.modal('hide');
       },
-
   };
 })();
 
 function get_commits_per_repo(chart_id, since, until, org) {
   myApp.showPleaseWait();
-  var get_commits_uri = '/api/org/commits?org=' + org;
+  var get_commits_uri = '/api/org/repos/commits?org=' + org;
   if (since && until) {
     get_commits_uri += '&since=' + since + '&until=' + until;
   }
@@ -57,7 +56,7 @@ function update_all() {
     else {
       since.setDate(until.getDate() - 7);
     }
-
+    update_org_table(org);
     update_global_commits_per_repo(since, until, org);
     if (!document.getElementById("h_total_commits")) {
       $("#total_commits_chart").prepend("<h2 id=\"h_total_commits\">Total number of commits per repository</h2>")
@@ -67,6 +66,37 @@ function update_all() {
     $("#org_field_div").addClass("has-error");
     $('#org_field').popover('show');
   }
+}
+
+function update_org_table(org) {
+  var t = document.getElementById('org_table');
+  $.getJSON('/api/org?org=' + org, function(org_data){
+    $.getJSON('/api/org/members?org=' + org, function(org_members){
+      // Create table header
+      var header = document.createElement('thead');
+      var tr = document.createElement('tr');
+      var th = document.createElement('th');
+      th.textContent = org + ' organization';
+      tr.appendChild(th);
+      header.appendChild(tr);
+      t.appendChild(header);
+
+      // Create table contents
+      body = document.createElement('tbody');
+      tr = document.createElement('tr');
+      var td = document.createElement('td');
+      //Created at
+      td.textContent = "Created at";
+      tr.appendChild(td);
+      td = document.createElement('td');
+      created_at = new Date(org_data['created_at']);
+      td.textContent = created_at.toDateString();
+      tr.appendChild(td);
+      body.appendChild(tr);
+      t.appendChild(body);
+      t
+    });
+  });
 }
 
 
@@ -86,14 +116,13 @@ function build_discrete_bar_chart(chart_id, data) {
     .x(function(d) { return d.label })
     .y(function(d) { return d.value })
     .staggerLabels(true)
-    .tooltips(true)
     .showValues(true)
     .height(600)
     .margin({bottom: 60});
 
     d3.select('#' + chart_id + ' svg')
     .datum(data)
-    .transition().duration(1000)
+    .transition().duration(800)
     .call(chart)
     .attr('style', 'height:600');
 

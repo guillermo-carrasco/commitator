@@ -14,6 +14,7 @@ ACCESS_TOKEN = None
 # Organization level
 GH_ORG = GH_BASE + '/orgs/{org}'
 GH_ORG_REPOS = GH_ORG + '/repos'
+GH_ORG_MEMBERS = GH_ORG + '/public_members'
 
 # Repository level
 GH_REPOS = GH_BASE + '/repos'
