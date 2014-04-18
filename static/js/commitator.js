@@ -70,38 +70,49 @@ function update_all() {
 
 function update_org_table(org) {
 
-  function add_row(body, k, v) {
-    var td = document.createElement('td');
-    var tr = document.createElement('tr');
-    td.textContent = k;
-    tr.appendChild(td);
-    td = document.createElement('td');
-    td.textContent = v;
-    tr.appendChild(td);
-    body.appendChild(tr);
-  }
-
   var t = document.getElementById('org_table');
-  $.getJSON('/api/org?org=' + org, function(org_data){
-    $.getJSON('/api/org/members?org=' + org, function(org_members){
-      // Create table header
-      var header = document.createElement('thead');
-      var tr = document.createElement('tr');
-      var th = document.createElement('th');
-      th.textContent = org + ' organization';
-      tr.appendChild(th);
-      header.appendChild(tr);
-      t.appendChild(header);
+  // Has the organization changed?
+  var h = $('#org_table thead th');
+  var org_changed = h.text().split(' ')[0] !== org;
 
-      // Create table contents
-      body = document.createElement('tbody');
-      created_at = new Date(org_data['created_at']);
-      add_row(body, "Created at", created_at.toDateString());
-      add_row(body, "Number of (public) members", Object.keys(org_members).length);
-      t.appendChild(body);
-      t
+  if (t.childElementCount == 0 || org_changed) {
+
+    $('#org_table').empty();
+
+    function add_row(body, k, v) {
+      var td = document.createElement('td');
+      var tr = document.createElement('tr');
+      td.textContent = k;
+      tr.appendChild(td);
+      td = document.createElement('td');
+      td.textContent = v;
+      tr.appendChild(td);
+      body.appendChild(tr);
+    }
+
+    $.getJSON('/api/org?org=' + org, function(org_data){
+      $.getJSON('/api/org/members?org=' + org, function(org_members){
+        // Create table header
+        var header = document.createElement('thead');
+        var tr = document.createElement('tr');
+        var th = document.createElement('th');
+        th.textContent = org + ' organization, located in ' + org_data['location'] + ' - ' + org_data['email'];
+        tr.appendChild(th);
+        header.appendChild(tr);
+        t.appendChild(header);
+
+        // Create table contents
+        body = document.createElement('tbody');
+        created_at = new Date(org_data['created_at']);
+        add_row(body, "Created at", created_at.toDateString());
+        add_row(body, "Number of (public) repositories", org_data['public_repos']);
+        add_row(body, "Number of (public) members", Object.keys(org_members).length);
+        add_row(body, "Followers", org_data['followers']);
+        t.appendChild(body);
+        t
+      });
     });
-  });
+  }
 }
 
 
