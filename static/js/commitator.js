@@ -93,6 +93,15 @@ function update_org_table(org) {
       td.textContent = created_at.toDateString();
       tr.appendChild(td);
       body.appendChild(tr);
+      // Number of members
+      tr = document.createElement('tr');
+      td = document.createElement('td');
+      td.textContent = "Number of (public) members";
+      tr.appendChild(td);
+      td = document.createElement('td');
+      td.textContent = Object.keys(org_members).length;
+      tr.appendChild(td);
+      body.appendChild(tr);
       t.appendChild(body);
       t
     });
