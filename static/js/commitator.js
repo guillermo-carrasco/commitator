@@ -69,6 +69,18 @@ function update_all() {
 }
 
 function update_org_table(org) {
+
+  function add_row(body, k, v) {
+    var td = document.createElement('td');
+    var tr = document.createElement('tr');
+    td.textContent = k;
+    tr.appendChild(td);
+    td = document.createElement('td');
+    td.textContent = v;
+    tr.appendChild(td);
+    body.appendChild(tr);
+  }
+
   var t = document.getElementById('org_table');
   $.getJSON('/api/org?org=' + org, function(org_data){
     $.getJSON('/api/org/members?org=' + org, function(org_members){
@@ -83,25 +95,9 @@ function update_org_table(org) {
 
       // Create table contents
       body = document.createElement('tbody');
-      tr = document.createElement('tr');
-      var td = document.createElement('td');
-      //Created at
-      td.textContent = "Created at";
-      tr.appendChild(td);
-      td = document.createElement('td');
       created_at = new Date(org_data['created_at']);
-      td.textContent = created_at.toDateString();
-      tr.appendChild(td);
-      body.appendChild(tr);
-      // Number of members
-      tr = document.createElement('tr');
-      td = document.createElement('td');
-      td.textContent = "Number of (public) members";
-      tr.appendChild(td);
-      td = document.createElement('td');
-      td.textContent = Object.keys(org_members).length;
-      tr.appendChild(td);
-      body.appendChild(tr);
+      add_row(body, "Created at", created_at.toDateString());
+      add_row(body, "Number of (public) members", Object.keys(org_members).length);
       t.appendChild(body);
       t
     });
