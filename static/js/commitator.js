@@ -59,7 +59,9 @@ function update_all() {
     update_org_table(org);
     update_global_commits_per_repo(since, until, org);
     if (!document.getElementById("h_total_commits")) {
-      $("#total_commits_chart").prepend("<h2 id=\"h_total_commits\">Total number of commits per repository</h2>")
+      var h = "<h3 id=\"h_total_commits\">Total number of commits per repository (" + 
+        since.toDateString() + " - " + until.toDateString() + ")</h3>";
+      $("#total_commits_chart").prepend(h);
     }
   }
   else {
@@ -92,11 +94,19 @@ function update_org_table(org) {
 
     $.getJSON('/api/org?org=' + org, function(org_data){
       $.getJSON('/api/org/members?org=' + org, function(org_members){
+
         // Create table header
         var header = document.createElement('thead');
         var tr = document.createElement('tr');
         var th = document.createElement('th');
-        th.textContent = org + ' organization, located in ' + org_data['location'] + ' - ' + org_data['email'];
+        th.setAttribute('colspan', '2')
+        th.textContent = org + ' organization';
+        if (org_data['location']) {
+          th.textContent = th.textContent + ', located in ' + org_data['location'];
+        }
+        if (org_data['email']) {
+          h.textContent = th.textContent + ' - ' + org_data['email'];
+        }
         tr.appendChild(th);
         header.appendChild(tr);
         t.appendChild(header);
