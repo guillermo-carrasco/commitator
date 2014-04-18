@@ -1,0 +1,4 @@
+/* Horitzontal scroll for a div with a lot of plots */
+div .plot-holder {
+    overflow: auto;
+}
