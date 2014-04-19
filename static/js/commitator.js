@@ -58,10 +58,16 @@ function update_all() {
     }
     update_org_table(org);
     update_global_commits_per_repo(since, until, org);
+    var content = "Total number of commits per repository (" + 
+        since.toDateString() + " - " + until.toDateString() + ')';
     if (!document.getElementById("h_total_commits")) {
-      var h = "<h3 id=\"h_total_commits\">Total number of commits per repository (" + 
-        since.toDateString() + " - " + until.toDateString() + ")</h3>";
+      var h = "<h3 id=\"h_total_commits\">" + content + "</h3>";
       $("#total_commits_chart").prepend(h);
+    }
+    // Just update with the new dates
+    else {
+      var h = document.getElementById("h_total_commits");
+      h.textContent = content;
     }
   }
   else {
