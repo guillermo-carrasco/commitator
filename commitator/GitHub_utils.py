@@ -32,6 +32,18 @@ def get_next_page(request):
 #################################
 #  Organization level API info  #
 #################################
+def get_all_info(org, since=None, until=None):
+    """ Return a JSON file containing all the information from an organization.
+    """
+    info = {}
+    info['basic_info'] = get_org_basic_info(org)
+    info['members'] = get_org_members(org)
+    info['repos'] = get_org_repos(org)
+    commits = get_commits_org(org, since, until)
+    for repo, commit_list in commits.iteritems():
+        info['repos'][repo]['commits'] = commit_list
+    return info
+
 def get_org_basic_info(org):
     """ Returns basic information of the organization
     """
@@ -71,7 +83,7 @@ def get_org_repos(org):
     return result
 
 
-def get_commits_org(org, since, until):
+def get_commits_org(org, since=None, until=None):
     """ Returns a dictionary of pairs {repository: commits} for all the repositories
 
     in the organization within the specified dates.
@@ -90,11 +102,12 @@ def get_commits_org(org, since, until):
 #  Repository level API info  #
 #################################
 
-def get_commits_repo(user, repo, since, until):
+def get_commits_repo(user, repo, since=None, until=None):
     """ Return the number of commits of the requested user's repository
     """
-    params['since'] = since
-    params['until'] = until
+    if since and until:
+        params['since'] = since
+        params['until'] = until
     # First page of commits always available
     r = requests.get(GH_REPO_COMMITS.format(user=user, repo=repo), params=params)
     commits = r.json()

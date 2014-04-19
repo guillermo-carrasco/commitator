@@ -16,10 +16,16 @@ app.config.update(
 #############
 @app.route('/api/org')
 def get_org_basic_info():
-  """ Returns basic info from the organization
+  """ Returns basic or complete info from the organization
   """
   org = request.args.get('org', '')
-  return flask.jsonify(GitHub_utils.get_org_basic_info(org))
+  get_all = request.args.get('info', False)
+  since = request.args.get('since', None)
+  until = request.args.get('until', None)
+  if get_all:
+    return flask.jsonify(GitHub_utils.get_all_info(org, since, until))
+  else:
+    return flask.jsonify(GitHub_utils.get_org_basic_info(org))
 
 @app.route('/api/org/repos')
 def get_org_repos():

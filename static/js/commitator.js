@@ -15,29 +15,6 @@ myApp = myApp || (function () {
   };
 })();
 
-function get_commits_per_repo(chart_id, since, until, org) {
-  myApp.showPleaseWait();
-  var get_commits_uri = '/api/org/repos/commits?org=' + org;
-  if (since && until) {
-    get_commits_uri += '&since=' + since + '&until=' + until;
-  }
-  $.getJSON(get_commits_uri, function(data) {
-    //Prepare the data for the nvd3 plot
-    chart_data = {'key': 'Total commits per repository', 'values': []};
-    $.each(data, function(k, v) {
-      //Omit repositories without commits
-      if (v.length) {
-        var value = {};
-        value['label'] = k;
-        value['value'] = v.length;
-        chart_data['values'].push(value);
-      }
-    });
-    build_discrete_bar_chart(chart_id, [chart_data]);
-  });
-}
-
-
 ///////////////////////////
 //  Update info methods  //
 ///////////////////////////
@@ -56,19 +33,24 @@ function update_all() {
     else {
       since.setDate(until.getDate() - 7);
     }
-    update_org_table(org);
-    update_global_commits_per_repo(since, until, org);
-    var content = "Total number of commits per repository (" + 
-        since.toDateString() + " - " + until.toDateString() + ')';
-    if (!document.getElementById("h_total_commits")) {
-      var h = "<h3 id=\"h_total_commits\">" + content + "</h3>";
-      $("#total_commits_chart").prepend(h);
-    }
-    // Just update with the new dates
-    else {
-      var h = document.getElementById("h_total_commits");
-      h.textContent = content;
-    }
+    // Get all the data of the organization from GitHub
+    myApp.showPleaseWait();
+    $.getJSON('/api/org?org=' + org + '&info=all&since=' + since + '&until=' + until, function(org_info){
+      update_org_table(org, org_info);
+      update_global_commits_per_repo(since, until, org_info);
+      var content = "Total number of commits per repository (" + 
+          since.toDateString() + " - " + until.toDateString() + ')';
+      if (!document.getElementById("h_total_commits")) {
+        var h = "<h3 id=\"h_total_commits\">" + content + "</h3>";
+        $("#total_commits_chart").prepend(h);
+      }
+      // Just update with the new dates
+      else {
+        var h = document.getElementById("h_total_commits");
+        h.textContent = content;
+      }
+    });
+    myApp.showPleaseWait();
   }
   else {
     $("#org_field_div").addClass("has-error");
@@ -76,7 +58,7 @@ function update_all() {
   }
 }
 
-function update_org_table(org) {
+function update_org_table(org, org_info) {
 
   var t = document.getElementById('org_table');
   // Has the organization changed?
@@ -98,43 +80,48 @@ function update_org_table(org) {
       body.appendChild(tr);
     }
 
-    $.getJSON('/api/org?org=' + org, function(org_data){
-      $.getJSON('/api/org/members?org=' + org, function(org_members){
+    // Create table header
+    var header = document.createElement('thead');
+    var tr = document.createElement('tr');
+    var th = document.createElement('th');
+    th.setAttribute('colspan', '2')
+    th.textContent = org + ' organization';
+    if (org_info['basic_info']['location']) {
+      th.textContent = th.textContent + ', located in ' + org_info['basic_info']['location'];
+    }
+    if (org_info['basic_info']['email']) {
+      h.textContent = th.textContent + ' - ' + org_info['basic_info']['email'];
+    }
+    tr.appendChild(th);
+    header.appendChild(tr);
+    t.appendChild(header);
 
-        // Create table header
-        var header = document.createElement('thead');
-        var tr = document.createElement('tr');
-        var th = document.createElement('th');
-        th.setAttribute('colspan', '2')
-        th.textContent = org + ' organization';
-        if (org_data['location']) {
-          th.textContent = th.textContent + ', located in ' + org_data['location'];
-        }
-        if (org_data['email']) {
-          h.textContent = th.textContent + ' - ' + org_data['email'];
-        }
-        tr.appendChild(th);
-        header.appendChild(tr);
-        t.appendChild(header);
-
-        // Create table contents
-        body = document.createElement('tbody');
-        created_at = new Date(org_data['created_at']);
-        add_row(body, "Created at", created_at.toDateString());
-        add_row(body, "Number of (public) repositories", org_data['public_repos']);
-        add_row(body, "Number of (public) members", Object.keys(org_members).length);
-        add_row(body, "Followers", org_data['followers']);
-        t.appendChild(body);
-        t
-      });
-    });
+    // Create table contents
+    body = document.createElement('tbody');
+    created_at = new Date(org_info['basic_info']['created_at']);
+    add_row(body, "Created at", created_at.toDateString());
+    add_row(body, "Number of (public) repositories", org_info['basic_info']['public_repos']);
+    add_row(body, "Number of (public) members", Object.keys(org_info['members']).length);
+    add_row(body, "Followers", org_info['basic_info']['followers']);
+    t.appendChild(body);
   }
 }
 
 
 //Updates the chart representing commits by user (first page returned by GH API)
-function update_global_commits_per_repo(since, until, org) {
-  var repos = get_commits_per_repo('total_commits_chart', since, until, org);
+function update_global_commits_per_repo(since, until, org_info) {
+  //Prepare the data for the nvd3 plot
+  chart_data = {'key': 'Total commits per repository', 'values': []};
+  $.each(org_info['repos'], function(k, v) {
+    //Omit repositories without commits
+    if (v['commits'].length) {
+      var value = {};
+      value['label'] = k;
+      value['value'] = v['commits'].length;
+      chart_data['values'].push(value);
+    }
+    build_discrete_bar_chart('total_commits_chart', [chart_data]);
+  });
 }
 
 
