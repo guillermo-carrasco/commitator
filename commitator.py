@@ -50,7 +50,7 @@ def get_org_total_commits():
   org = request.args.get('org', '')
   since = request.args.get('since', False)
   until = request.args.get('until', False)
-  return flask.jsonify(GitHub_utils.get_commits_org(org, since, until))
+  return flask.jsonify(GitHub_utils.get_org_commits(org, since, until))
 
 ###############
 # controllers #

@@ -39,7 +39,7 @@ def get_all_info(org, since=None, until=None):
     info['basic_info'] = get_org_basic_info(org)
     info['members'] = get_org_members(org)
     info['repos'] = get_org_repos(org)
-    commits = get_commits_org(org, since, until)
+    commits = get_org_commits(org, since, until)
     for repo, commit_list in commits.iteritems():
         info['repos'][repo]['commits'] = commit_list
     return info
@@ -72,7 +72,7 @@ def get_org_repos(org):
     r = requests.get(GH_ORG_REPOS.format(org=org), params=params)
     repos = r.json()
     result = {}
-    for repo in r.json():
+    for repo in repos:
         result[repo['name']] = repo
     next = get_next_page(r)
     while next:
@@ -83,14 +83,14 @@ def get_org_repos(org):
     return result
 
 
-def get_commits_org(org, since=None, until=None):
+def get_org_commits(org, since=None, until=None):
     """ Returns a dictionary of pairs {repository: commits} for all the repositories
 
     in the organization within the specified dates.
     """
     repos = get_org_repos(org)
     result = {}
-    jobs = [gevent.spawn(get_commits_repo, org, repo, since, until) for repo, info in repos.items()]
+    jobs = [gevent.spawn(get_repo_commits, org, repo, since, until) for repo, info in repos.items()]
     gevent.joinall(jobs)
     for job in jobs:
         commits = job.value[1]
@@ -102,7 +102,7 @@ def get_commits_org(org, since=None, until=None):
 #  Repository level API info  #
 #################################
 
-def get_commits_repo(user, repo, since=None, until=None):
+def get_repo_commits(user, repo, since=None, until=None):
     """ Return the number of commits of the requested user's repository
     """
     if since and until:

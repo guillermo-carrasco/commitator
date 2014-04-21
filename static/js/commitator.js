@@ -9,23 +9,27 @@ myApp = myApp || (function () {
     showPleaseWait: function() {
       pleaseWaitDiv.modal();
     },
-      hidePleaseWait: function () {
-        pleaseWaitDiv.modal('hide');
-      },
-  };
+    hidePleaseWait: function () {
+      pleaseWaitDiv.modal('hide');
+    },
+  }
+  ;
 })();
+
 
 ///////////////////////////
 //  Update info methods  //
 ///////////////////////////
+
 function update_all() {
   var org = document.getElementById('org_field').value;
   if (org) {
     // Pick up the data from the datarange widget. If no value (<span> starts with
     // Pick...), then by default get the last 7 days
-    var datarange = $('#reportrange span')[0]
+    var datarange = $('#reportrange span')[0];
     var since = new Date();
     var until = new Date();
+
     if(datarange.textContent[0] != 'P') {
       since = new Date(datarange.textContent.split(' - ')[0]);
       until = new Date(datarange.textContent.split(' - ')[1]);
@@ -33,16 +37,19 @@ function update_all() {
     else {
       since.setDate(until.getDate() - 7);
     }
+
     // Get all the data of the organization from GitHub
     myApp.showPleaseWait();
     $.getJSON('/api/org?org=' + org + '&info=all&since=' + since + '&until=' + until, function(org_info){
       update_org_table(org, org_info);
       update_global_commits_per_repo(since, until, org_info);
-      var content = "Total number of commits per repository (" + 
+      update_global_commits_per_user(since, until, org_info);
+      var content = "Total number of commits per repository (" +
           since.toDateString() + " - " + until.toDateString() + ')';
+
       if (!document.getElementById("h_total_commits")) {
         var h = "<h3 id=\"h_total_commits\">" + content + "</h3>";
-        $("#total_commits_chart").prepend(h);
+        $("#commits_per_repo_chart").prepend(h);
       }
       // Just update with the new dates
       else {
@@ -61,6 +68,7 @@ function update_all() {
 function update_org_table(org, org_info) {
 
   var t = document.getElementById('org_table');
+
   // Has the organization changed?
   var h = $('#org_table thead th');
   var org_changed = h.text().split(' ')[0] !== org;
@@ -85,7 +93,7 @@ function update_org_table(org, org_info) {
     var tr = document.createElement('tr');
     var th = document.createElement('th');
     th.setAttribute('colspan', '2')
-    th.textContent = org + ' organization';
+    th.textContent = org;
     if (org_info['basic_info']['location']) {
       th.textContent = th.textContent + ', located in ' + org_info['basic_info']['location'];
     }
@@ -99,16 +107,15 @@ function update_org_table(org, org_info) {
     // Create table contents
     body = document.createElement('tbody');
     created_at = new Date(org_info['basic_info']['created_at']);
-    add_row(body, "Created at", created_at.toDateString());
-    add_row(body, "Number of (public) repositories", org_info['basic_info']['public_repos']);
-    add_row(body, "Number of (public) members", Object.keys(org_info['members']).length);
-    add_row(body, "Followers", org_info['basic_info']['followers']);
+    add_row(body, "Created", created_at.toDateString());
+    add_row(body, "Number of public repositories", org_info['basic_info']['public_repos']);
+    add_row(body, "Number of public members", Object.keys(org_info['members']).length);
+    add_row(body, "Number of followers", org_info['basic_info']['followers']);
     t.appendChild(body);
   }
 }
 
-
-//Updates the chart representing commits by user (first page returned by GH API)
+//Updates the chart representing commits per repo (first page returned by GH API)
 function update_global_commits_per_repo(since, until, org_info) {
   //Prepare the data for the nvd3 plot
   chart_data = {'key': 'Total commits per repository', 'values': []};
@@ -120,38 +127,67 @@ function update_global_commits_per_repo(since, until, org_info) {
       value['value'] = v['commits'].length;
       chart_data['values'].push(value);
     }
-    build_discrete_bar_chart('total_commits_chart', [chart_data]);
   });
+  build_discrete_bar_chart('commits_per_repo_chart', [chart_data]);
+}
+
+//Updates the chart representing commits per user (first page returned by GH API)
+function update_global_commits_per_user(since, until, org_info) {
+  //Prepare the data for the nvd3 plot
+  commits_by_author = {}
+  $.each(org_info['repos'], function(k, v) {
+    for (var i = 0; i < v['commits'].length; i++) {
+      commit = v['commits'][i];
+      if (commit['author'] != undefined) {
+        author_login = commit['author']['login'];
+        if (commits_by_author[author_login]) {
+          commits_by_author[author_login] += 1;
+        } else {
+          commits_by_author[author_login] = 1;
+        }
+      }
+    }
+  });
+
+  chart_data = {'key': 'Total commits per user', 'values': []};
+  $.each(commits_by_author, function(k, v) {
+    var value = {};
+    value['label'] = k;
+    value['value'] = v;
+    chart_data['values'].push(value);
+  });
+  build_discrete_bar_chart('commits_per_user_chart', [chart_data]);
 }
 
 
 ///////////////////////
 //  Drawing methods  //
-//////////////////////
+///////////////////////
+
 function build_discrete_bar_chart(chart_id, data) {
   myApp.hidePleaseWait();
   nv.addGraph(function() {
     var chart = nv.models.discreteBarChart()
-    .x(function(d) { return d.label })
-    .y(function(d) { return d.value })
-    .staggerLabels(true)
-    .showValues(true)
-    .height(600)
-    .margin({bottom: 60});
+      .x(function(d) { return d.label })
+      .y(function(d) { return d.value })
+      .staggerLabels(true)
+      .showValues(true)
+      .height(600)
+      .margin({bottom: 60});
 
     d3.select('#' + chart_id + ' svg')
-    .datum(data)
-    .transition().duration(800)
-    .call(chart)
-    .attr('style', 'height:600');
+      .datum(data)
+      .transition().duration(800)
+      .call(chart)
+      .attr('style', 'height:600');
 
-  nv.utils.windowResize(chart.update);
+    nv.utils.windowResize(chart.update);
 
-  return chart;
+    return chart;
   });
 }
 
-//Datarange picker 
+//Datarange picker
 $('#reportrange').daterangepicker(
     {
       ranges: {
@@ -177,6 +213,7 @@ $('#reportrange').daterangepicker(
 //////////////////////////
 //  Responsive methods  //
 //////////////////////////
+
 $("#org_form").submit( function(e) {
   e.preventDefault();
   update_all();
