@@ -1,17 +1,20 @@
 {% extends "base.html" %}
 {% block title %} - Home{% endblock %}
 {% block content %}
-<h1>Welcome to Commitator!</h1>
-<p style="text-align:justify;">
-  With this web app, you can see some information about your GitHub organization
-  in a very cool way! It will show you all kind of useful statistics from your repositories
-  and members. <br /> <br />
-  Try it out right now, select a time period and write the name of your organization
-  on the box below, click on Fetch Data and enjoy! <br /><br />
-  <b>Please note</b> that due to how GitHub API works, and depending on your repositories
-  activity, the longer the time period you select, the more API calls Commitator has
-  to make to GitHub, and therefore the response time can be slower.
-</p>
+
+<div id="welcome">
+  <h1>Welcome to Commitator!</h1>
+  <p style="text-align:justify;">
+    With this web app, you can see some stats about the public information of any GitHub organization
+    in a cool way! It will show you all kind of useful statistics from your repositories
+    and members. <br /> <br />
+    Try it out right now, select a time period and write the name of your organization
+    on the box below, click on Fetch Data and enjoy! <br /><br />
+    <b>Please note</b> that due to how GitHub API works, and depending on your repositories
+    activity, the longer the time period you select, the more API calls Commitator has
+    to make to GitHub, and therefore the response time can be slower.
+  </p>
+</div>
 <div class="well container" style="overflow: auto">
   <div class="col-md-2"></div>
   <div id="reportrange" class="col-md-4" style="padding-top: 8px">
@@ -22,7 +25,7 @@
     <form class="form-inline" role="form" id="org_form">
       <div class="form-group" id="org_field_div">
         <label class="sr-only" for="inputError1">GitHub organization...</label>
-        <input class="form-control" id="org_field" placeholder="GitHub organization..." data-container="body" data-toggle="popover" data-placement="bottom" data-content="Introduce here the name of the organization you want to get statistics from">
+        <input class="form-control" id="org_field" placeholder="GitHub organization..." data-container="body" data-toggle="popover" data-placement="bottom" data-content="Introduce the name of the organization you want to get statistics from">
       </div>
       <button type="submit" class="btn btn-success">Fetch data!</button>
     </form>
