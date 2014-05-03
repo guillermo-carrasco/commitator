@@ -41,7 +41,7 @@ function update_all() {
     // Get all the data of the organization from GitHub
     myApp.showPleaseWait();
 
-    get_all_data(org).then(function (org_info, org_members, org_repos) {
+    get_all_data(org, since, until).done(function (org_info, org_members, org_repos) {
       update_org_table(org, org_info, org_members);
       update_global_commits_per_repo(since, until, org_repos);
       update_global_commits_per_user(since, until, org_repos);
@@ -67,88 +67,95 @@ function update_all() {
   }
 }
 
-function get_github_json(path, callback) {
-  return $.getJSON('https://api.github.com' + path, callback);
+function getRequestJSON(full_path, params) {
+  params = params || {};
+  params['access_token'] = '';
+  return $.getJSON(full_path, params);
 }
 
-function get_all_data(org) {
+function iterate(full_path, params, results, def) {
+  var req = getRequestJSON(full_path, params);
+
+  req.done(function (data, textStatus, jqXHR) {
+    results.push.apply(results, data);
+
+    var links = (jqXHR.getResponseHeader('link') || '').split(/\s*,\s*/g);
+    var next = '';
+    for (var i = 0; i < links.length; i++) {
+      if (links[i].indexOf('rel="next"') !=-1) {
+        next = /<(.*)>/.exec(links[i])[1];
+        break;
+      }
+    }
+
+    if (!next) {
+      def.resolve(results);
+    } else {
+      iterate(next, params, results, def);
+    }
+  });
+
+  req.fail(function (jqXHR, textStatus, errorThrown) {
+    console.log('Error when fetching ' + full_path + " - " + errorThrown);
+    def.resolve([]);
+  });
+}
+
+function get_github_json(path,  params) {
+  var results = [];
+  var def = new $.Deferred();
+  var req = iterate('https://api.github.com' + path, params, results, def);
+  return def;
+}
+
+function get_all_data(org, since, until) {
   org_req = get_org_basic_info(org);
   members_req = get_org_members(org);
-  org_repos = get_org_repos_with_commits(org);
+  org_repos = get_org_repos_with_commits(org, since, until);
 
   return $.when(org_req, members_req, org_repos);
 }
 
 function get_org_basic_info(org) {
-  var def = new $.Deferred();
-
-  get_github_json('/orgs/' + org, function(org_info){
-    def.resolve(org_info);
-  });
-
-  return def.promise();
+  return get_github_json('/orgs/' + org, {});
 }
 
 function get_org_members(org) {
-  var def = new $.Deferred();
-
-  get_github_json('/orgs/' + org + '/public_members', function(org_members){
-    def.resolve(org_members);
-  });
-
-  return def.promise();
+  return get_github_json('/orgs/' + org + '/public_members', {});
 }
 
-function get_org_repos_with_commits(org) {
-  var def = new $.Deferred();
-
-  get_org_repos(org).done(function (org_repos) {
-
-    get_commits_repos(org, org_repos).done( function (org_repos) {
-      def.resolve(org_repos);
-    });
-
+function get_org_repos_with_commits(org, since, until) {
+  return get_org_repos(org).then(function (org_repos) {
+    return get_commits_repos(org, org_repos, since, until);
   });
-
-  return def.promise();
 }
 
 function get_org_repos(org) {
-  var def = new $.Deferred();
-
-  get_github_json('/orgs/' + org + '/repos', function(repos){
-    def.resolve(repos);
-  });
-
-  return def.promise();
+  return get_github_json('/orgs/' + org + '/repos', {});
 }
 
-function get_commits_repos(org, org_repos) {
-  var def = new $.Deferred();
-
+function get_commits_repos(org, org_repos, since, until) {
   var reqs = [];
   for (var i = 0; i < org_repos.length; i++) {
-    reqs.push(get_commits_repo(org, org_repos[i]));
+    reqs.push(get_commits_repo(org, org_repos[i], since, until));
   }
 
   // Apply converts an array into an arguments list
-  $.when.apply(this, reqs).done(function () {
+  return $.when.apply(this, reqs).then(function () {
     // Arguments object is a local variable available within all functions with its arguments
-    def.resolve(arguments);
+    return org_repos;
   });
-
-  return def.promise();
 }
 
-function get_commits_repo(org, repo) {
-  var def = new $.Deferred();
-
-  get_github_json('/repos/' + org + '/' + repo['name'] + '/commits', function(commits){
+function get_commits_repo(org, repo, since, until) {
+  params = {'since': since.toISOString(), 'until': until.toISOString()};
+  return get_github_json('/repos/' + org + '/' + repo['name'] + '/commits', params).then(function(commits){
     repo['commits'] = commits;
-    def.resolve(repo);
+  },
+  function() {
+    console.log("Failed getting commits");
+    repo['commits'] = [];
   });
-
-  return def.promise();
 }
 
 function update_org_table(org, org_basic_info, org_members) {
@@ -207,13 +214,14 @@ function update_global_commits_per_repo(since, until, org_repos) {
   for (var i = 0; i < org_repos.length; i++) {
     //Omit repositories without commits
     repo = org_repos[i];
-    if (repo['commits'].length) {
+
+    if (repo && repo['commits'].length) {
       var value = {};
       value['label'] = repo['name'];
       value['value'] = repo['commits'].length;
       chart_data['values'].push(value);
     }
-  };
+  }
 
   build_discrete_bar_chart('commits_per_repo_chart', [chart_data]);
 }
