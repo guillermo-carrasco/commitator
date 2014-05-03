@@ -89,7 +89,10 @@ function iterate(full_path, params, results, def) {
     }
 
     if (!next) {
-      def.resolve(results);
+      if (results.length)
+        def.resolve(results);
+      else
+        def.resolve(data);
     } else {
       iterate(next, params, results, def);
     }
@@ -126,7 +129,7 @@ function get_org_members(org) {
 
 function get_org_repos_with_commits(org, since, until) {
   return get_org_repos(org).then(function (org_repos) {
-    return get_commits_repos(org, org_repos, since, until);
+    return get_repos_commits(org, org_repos, since, until);
   });
 }
 
@@ -134,27 +137,22 @@ function get_org_repos(org) {
   return get_github_json('/orgs/' + org + '/repos', {});
 }
 
-function get_commits_repos(org, org_repos, since, until) {
+function get_repos_commits(org, org_repos, since, until) {
   var reqs = [];
   for (var i = 0; i < org_repos.length; i++) {
-    reqs.push(get_commits_repo(org, org_repos[i], since, until));
+    reqs.push(get_repo_commits(org, org_repos[i], since, until));
   }
 
   // Apply converts an array into an arguments list
   return $.when.apply(this, reqs).then(function () {
-    // Arguments object is a local variable available within all functions with its arguments
     return org_repos;
   });
 }
 
-function get_commits_repo(org, repo, since, until) {
+function get_repo_commits(org, repo, since, until) {
   params = {'since': since.toISOString(), 'until': until.toISOString()};
   return get_github_json('/repos/' + org + '/' + repo['name'] + '/commits', params).then(function(commits){
     repo['commits'] = commits;
-  },
-  function() {
-    console.log("Failed getting commits");
-    repo['commits'] = [];
   });
 }
 
