@@ -338,7 +338,5 @@ $("#org_field").keyup(function(e){
 
 $("#authorize_button").click(function(event){
     // Will just execute the first step authentication of GitHub OAuth
-    $.get('/api/user/token', function(data, status){
-        console.log(data);
-    });
+    window.location.replace('/api/user/auth');
 });
