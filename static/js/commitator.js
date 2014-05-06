@@ -40,105 +40,204 @@ function update_all() {
 
     // Get all the data of the organization from GitHub
     myApp.showPleaseWait();
-    $.getJSON('/api/org?org=' + org + '&info=all&since=' + since + '&until=' + until, function(org_info){
-      update_org_table(org, org_info);
-      update_global_commits_per_repo(since, until, org_info);
-      update_global_commits_per_user(since, until, org_info);
-      var content = "Total number of commits per repository (" +
-          since.toDateString() + " - " + until.toDateString() + ')';
 
-      if (!document.getElementById("h_total_commits")) {
-        var h = "<h3 id=\"h_total_commits\">" + content + "</h3>";
-        $("#commits_per_repo_chart").prepend(h);
-      }
-      // Just update with the new dates
-      else {
-        var h = document.getElementById("h_total_commits");
-        h.textContent = content;
+    get_all_data(org, since, until).done(function (org_info, org_members, org_repos) {
+      myApp.hidePleaseWait();
+
+      if (!org_info) {
+        alert("Error when fetching organization data for: " + org);
+      } else {
+        $("#welcome").slideUp();
+        update_org_table(org, org_info, org_members);
+        update_global_commits_per_repo(since, until, org_repos);
+        update_global_commits_per_user(since, until, org_repos);
       }
     });
-    myApp.showPleaseWait();
-  }
-  else {
+  } else {
     $("#org_field_div").addClass("has-error");
     $('#org_field').popover('show');
   }
 }
 
-function update_org_table(org, org_info) {
+function getRequestJSON(full_path, params) {
+  params = params || {};
+  params['access_token'] = '';
+  return $.getJSON(full_path, params);
+}
 
+function iterate(full_path, params, results, def) {
+  var req = getRequestJSON(full_path, params);
+
+  req.done(function (data, textStatus, jqXHR) {
+    results.push.apply(results, data);
+
+    var links = (jqXHR.getResponseHeader('link') || '').split(/\s*,\s*/g);
+    var next = '';
+    for (var i = 0; i < links.length; i++) {
+      if (links[i].indexOf('rel="next"') !=-1) {
+        next = /<(.*)>/.exec(links[i])[1];
+        break;
+      }
+    }
+
+    if (!next) {
+      if (results.length)
+        def.resolve(results);
+      else
+        def.resolve(data);
+    } else {
+      iterate(next, params, results, def);
+    }
+  });
+
+  req.fail(function (jqXHR, textStatus, errorThrown) {
+    console.log('Error when fetching ' + full_path + " - " + errorThrown);
+    def.resolve(undefined);
+  });
+}
+
+function get_github_json(path,  params) {
+  var results = [];
+  var def = new $.Deferred();
+  var req = iterate('https://api.github.com' + path, params, results, def);
+  return def;
+}
+
+function get_all_data(org, since, until) {
+  org_req = get_org_basic_info(org);
+  members_req = get_org_members(org);
+  org_repos = get_org_repos_with_commits(org, since, until);
+
+  return $.when(org_req, members_req, org_repos);
+}
+
+function get_org_basic_info(org) {
+  return get_github_json('/orgs/' + org, {});
+}
+
+function get_org_members(org) {
+  return get_github_json('/orgs/' + org + '/public_members', {});
+}
+
+function get_org_repos_with_commits(org, since, until) {
+  return get_org_repos(org).then(function (org_repos) {
+    return get_repos_commits(org, org_repos || [], since, until);
+  });
+}
+
+function get_org_repos(org) {
+  return get_github_json('/orgs/' + org + '/repos', {});
+}
+
+function get_repos_commits(org, org_repos, since, until) {
+  var reqs = [];
+  for (var i = 0; i < org_repos.length; i++) {
+    reqs.push(get_repo_commits(org, org_repos[i], since, until));
+  }
+
+  // Apply converts an array into an arguments list
+  return $.when.apply(this, reqs).then(function () {
+    return org_repos;
+  });
+}
+
+function get_repo_commits(org, repo, since, until) {
+  params = {'since': since.toISOString(), 'until': until.toISOString()};
+  return get_github_json('/repos/' + org + '/' + repo['name'] + '/commits', params).then(function(commits){
+    repo['commits'] = (commits || []);
+  });
+}
+
+function update_org_table(org, org_basic_info, org_members) {
   var t = document.getElementById('org_table');
 
-  // Has the organization changed?
-  var h = $('#org_table thead th');
-  var org_changed = h.text().split(' ')[0] !== org;
+  $('#org_table').empty();
 
-  if (t.childElementCount == 0 || org_changed) {
-
-    $('#org_table').empty();
-
-    function add_row(body, k, v) {
-      var td = document.createElement('td');
-      var tr = document.createElement('tr');
-      td.textContent = k;
-      tr.appendChild(td);
-      td = document.createElement('td');
-      td.textContent = v;
-      tr.appendChild(td);
-      body.appendChild(tr);
-    }
-
-    // Create table header
-    var header = document.createElement('thead');
+  function add_row(body, k, v) {
+    var td = document.createElement('td');
     var tr = document.createElement('tr');
-    var th = document.createElement('th');
-    th.setAttribute('colspan', '2')
-    th.textContent = org;
-    if (org_info['basic_info']['location']) {
-      th.textContent = th.textContent + ', located in ' + org_info['basic_info']['location'];
-    }
-    if (org_info['basic_info']['email']) {
-      h.textContent = th.textContent + ' - ' + org_info['basic_info']['email'];
-    }
-    tr.appendChild(th);
-    header.appendChild(tr);
-    t.appendChild(header);
-
-    // Create table contents
-    body = document.createElement('tbody');
-    created_at = new Date(org_info['basic_info']['created_at']);
-    add_row(body, "Created", created_at.toDateString());
-    add_row(body, "Number of public repositories", org_info['basic_info']['public_repos']);
-    add_row(body, "Number of public members", Object.keys(org_info['members']).length);
-    add_row(body, "Number of followers", org_info['basic_info']['followers']);
-    t.appendChild(body);
+    td.textContent = k;
+    tr.appendChild(td);
+    td = document.createElement('td');
+    td.textContent = v;
+    tr.appendChild(td);
+    body.appendChild(tr);
   }
+
+  // Create table header
+  var header = document.createElement('thead');
+  var tr = document.createElement('tr');
+  var th = document.createElement('th');
+  th.setAttribute('colspan', '2');
+  th.textContent = org_basic_info['name'];
+
+  if (org_basic_info['location']) {
+    th.textContent = th.textContent + '  (' + org_basic_info['location'] + ')';
+  }
+
+  if (org_basic_info['email']) {
+    h.textContent = th.textContent + ' - ' + org_basic_info['email'];
+  }
+
+  tr.appendChild(th);
+  header.appendChild(tr);
+  t.appendChild(header);
+
+  // Create table contents
+  body = document.createElement('tbody');
+  created_at = new Date(org_basic_info['created_at']);
+  add_row(body, "Created", created_at.toDateString());
+  add_row(body, "Number of public repositories", org_basic_info['public_repos']);
+  add_row(body, "Number of public members", org_members.length);
+
+  if (org_basic_info['blog'])
+    add_row(body, "Web", org_basic_info['blog']);
+
+  t.appendChild(body);
+
 }
 
 //Updates the chart representing commits per repo (first page returned by GH API)
-function update_global_commits_per_repo(since, until, org_info) {
+function update_global_commits_per_repo(since, until, org_repos) {
   //Prepare the data for the nvd3 plot
   chart_data = {'key': 'Total commits per repository', 'values': []};
-  $.each(org_info['repos'], function(k, v) {
+  for (var i = 0; i < org_repos.length; i++) {
     //Omit repositories without commits
-    if (v['commits'].length) {
+    repo = org_repos[i];
+
+    if (repo['commits'].length) {
       var value = {};
-      value['label'] = k;
-      value['value'] = v['commits'].length;
+      value['label'] = repo['name'];
+      value['value'] = repo['commits'].length;
       chart_data['values'].push(value);
     }
-  });
+  }
+
   build_discrete_bar_chart('commits_per_repo_chart', [chart_data]);
+
+  var content = "Number of commits per repository (" +
+        since.toDateString() + " - " + until.toDateString() + ')';
+
+  if (!document.getElementById("h_commits_per_repo")) {
+    var h = "<h3 id=\"h_commits_per_repo\">" + content + "</h3>";
+    $("#commits_per_repo_chart").prepend(h);
+  }
+  else {
+    var h = document.getElementById("h_commits_per_repo");
+    h.textContent = content;
+  }
+
 }
 
 //Updates the chart representing commits per user (first page returned by GH API)
-function update_global_commits_per_user(since, until, org_info) {
+function update_global_commits_per_user(since, until, org_repos) {
   //Prepare the data for the nvd3 plot
-  commits_by_author = {}
-  $.each(org_info['repos'], function(k, v) {
-    for (var i = 0; i < v['commits'].length; i++) {
-      commit = v['commits'][i];
-      if (commit['author'] != undefined) {
+  commits_by_author = {};
+
+  for (var i = 0; i < org_repos.length; i++) {
+    for (var j = 0; j < org_repos[i]['commits'].length; j++) {
+      commit = org_repos[i]['commits'][j];
+      if (commit['author']) {
         author_login = commit['author']['login'];
         if (commits_by_author[author_login]) {
           commits_by_author[author_login] += 1;
@@ -147,16 +246,29 @@ function update_global_commits_per_user(since, until, org_info) {
         }
       }
     }
-  });
+  };
 
   chart_data = {'key': 'Total commits per user', 'values': []};
-  $.each(commits_by_author, function(k, v) {
+  $.each(commits_by_author, function(author, num_commits) {
     var value = {};
-    value['label'] = k;
-    value['value'] = v;
+    value['label'] = author;
+    value['value'] = num_commits;
     chart_data['values'].push(value);
   });
   build_discrete_bar_chart('commits_per_user_chart', [chart_data]);
+
+  var content = "Number of commits per user (" +
+        since.toDateString() + " - " + until.toDateString() + ')';
+
+  if (!document.getElementById("h_commits_per_user")) {
+    var h = "<h3 id=\"h_commits_per_user\">" + content + "</h3>";
+    $("#commits_per_user_chart").prepend(h);
+  }
+  else {
+    var h = document.getElementById("h_commits_per_user");
+    h.textContent = content;
+  }
+
 }
 
 
@@ -165,15 +277,15 @@ function update_global_commits_per_user(since, until, org_info) {
 ///////////////////////
 
 function build_discrete_bar_chart(chart_id, data) {
-  myApp.hidePleaseWait();
   nv.addGraph(function() {
     var chart = nv.models.discreteBarChart()
-      .x(function(d) { return d.label })
-      .y(function(d) { return d.value })
+      .x(function(d) { return d.label; })
+      .y(function(d) { return d.value; })
       .staggerLabels(true)
       .showValues(true)
       .height(600)
-      .margin({bottom: 60});
+      .margin({bottom: 60})
+      .valueFormat(d3.format('d'));
 
     d3.select('#' + chart_id + ' svg')
       .datum(data)
