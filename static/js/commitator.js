@@ -223,3 +223,10 @@ $("#org_field").keyup(function(e){
   $("#org_field_div").removeClass('has-error');
   $('#org_field').popover('hide');
 });
+
+$("#authorize_button").click(function(event){
+    // Will just execute the first step authentication of GitHub OAuth
+    $.get('/api/user/token', function(data, status){
+        console.log(data);
+    });
+});
