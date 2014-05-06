@@ -1,7 +1,7 @@
 import os
 
 import flask
-from flask import Flask, Response, render_template, send_from_directory, request
+from flask import Flask, Response, render_template, send_from_directory, request, session, redirect
 
 from commitator import GitHub_utils
 
@@ -10,6 +10,7 @@ app = Flask(__name__, static_url_path='/static')
 app.config.update(
     DEBUG = True,
 )
+app.secret_key = GitHub_utils.CLIENT_SECRET
 
 #############
 # API calls #
@@ -51,6 +52,24 @@ def get_org_total_commits():
   since = request.args.get('since', False)
   until = request.args.get('until', False)
   return flask.jsonify(GitHub_utils.get_org_commits(org, since, until))
+
+@app.route('/api/user/token')
+def get_user_token():
+    """ Returns a token obtained via GitHub OAuth2 protocol
+    """
+    token = session.get('token', None)
+    if not token:
+        # code parameter will be returned by GitHub in Step 1 of OAuth2 authentication
+        code = request.args.get('code', None)
+        if not code:
+            redirect_uri = GitHub_utils.oauth_first_step()
+            # This will redirect the user to the "Accept permissions" page, then
+            # when the user clicks accept, will be redirected here with the parameter code
+            return redirect(redirect_uri)
+        else:
+            token = GitHub_utils.oauth_second_step(code)
+            session['token'] = token
+    return flask.jsonify({'user_token': session['token']})
 
 ###############
 # controllers #

@@ -7,9 +7,6 @@ from gevent import monkey; monkey.patch_all()
 
 from commitator import *
 
-params = {}
-if ACCESS_TOKEN:
-    params = {'access_token': ACCESS_TOKEN}
 
 ##################################
 # General manipulation functions #
@@ -53,6 +50,9 @@ def get_org_basic_info(org):
 def get_org_members(org):
     """ Return all members for an organization
     """
+    params = {}
+    if ACCESS_TOKEN:
+        params['access_token'] = ACCESS_TOKEN
     r = requests.get(GH_ORG_MEMBERS.format(org=org), params=params)
     members = r.json()
     next = get_next_page(r)
@@ -69,6 +69,9 @@ def get_org_members(org):
 def get_org_repos(org):
     """Return all repositories within an Organization
     """
+    params = {}
+    if ACCESS_TOKEN:
+        params['access_token'] = ACCESS_TOKEN
     r = requests.get(GH_ORG_REPOS.format(org=org), params=params)
     repos = r.json()
     result = {}
@@ -98,13 +101,16 @@ def get_org_commits(org, since=None, until=None):
     return result
 
 
-#################################
+###############################
 #  Repository level API info  #
-#################################
+###############################
 
 def get_repo_commits(user, repo, since=None, until=None):
     """ Return the number of commits of the requested user's repository
     """
+    params = {}
+    if ACCESS_TOKEN:
+        params['access_token'] = ACCESS_TOKEN
     if since and until:
         params['since'] = since
         params['until'] = until
@@ -117,3 +123,35 @@ def get_repo_commits(user, repo, since=None, until=None):
         commits += r.json()
         next = get_next_page(r)
     return (repo, commits)
+
+
+#########################
+# GitHub OAuth2 methods #
+#########################
+def oauth_first_step():
+    """ Will return the URL so that the user can grant Commitator read permissions
+
+    on user ans repository information
+    """
+    params = {}
+    if ACCESS_TOKEN:
+        params['access_token'] = ACCESS_TOKEN
+    if CLIENT_ID:
+        params['client_id'] = CLIENT_ID
+    params['scopes'] = 'user,repo'
+    return GH_OATUH_AUTHORIZE + '?' + '&'.join(["{}={}".format(k,v) for k,v in params.iteritems()])
+
+def oauth_second_step(code):
+    """ Fetch and return user token
+    """
+    params = {}
+    if CLIENT_ID:
+        params['client_id'] = CLIENT_ID
+    if CLIENT_SECRET:
+        params['client_secret'] = CLIENT_SECRET
+    params['code'] = code
+
+    headers={'Accept': 'application/json'}
+
+    r = requests.post(GH_OATUH_GET_TOKEN, params=params, headers=headers)
+    return r.json()['access_token']
