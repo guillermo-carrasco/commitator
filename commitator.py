@@ -25,14 +25,17 @@ def github_oauth(code):
 
     gh_oauth_get_token = 'https://github.com/login/oauth/access_token'
     r = requests.post(gh_oauth_get_token, params=params, headers=headers)
-    return r.json()['access_token']
+    if r.status_code != requests.codes.OK:
+        return r.json()['access_token']
+    else:
+        return 'unavailable'
 
 @app.route('/oauth')
 def do_oauth():
     """ Performs GitHub OAuth2 protocol
     """
     token = session.get('token', None)
-    if not token:
+    if not token or token=='unavailable':
         # code parameter will be returned by GitHub in Step 1 of OAuth2 authentication
         code = request.args.get('code', None)
         if not code:

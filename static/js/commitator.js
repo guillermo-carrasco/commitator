@@ -343,9 +343,14 @@ $("#authorize_button").click(function(event){
 $(document).ready(function(){
   $.getJSON('/token', function(data){
     if (data['access_token']) {
-      $.cookie('token', data['access_token']);
-      $("#authorize_button").remove();
-      $("#reportrange_container").css('display', 'block');
+      if (data['access_token'] != 'unavailable') {
+        $.cookie('token', data['access_token']);
+        $("#authorize_button").remove();
+        $("#reportrange_container").css('display', 'block');
+      }
+      else {
+        console.alert("There was some problem retrieving your access token, please try it again later.")
+      }
     }
     else {
       $("#authorize_container").css('display', 'block');
