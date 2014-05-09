@@ -1,56 +1,56 @@
+import ConfigParser
 import os
+import requests
 
 import flask
-from flask import Flask, Response, render_template, send_from_directory, request
 
-from commitator import GitHub_utils
+from ConfigParser import NoSectionError, NoOptionError
+from flask import Flask, Response, render_template, send_from_directory, request, session, redirect
 
-# initialization
+# App initialization
 app = Flask(__name__, static_url_path='/static')
 app.config.update(
     DEBUG = True,
 )
 
-#############
-# API calls #
-#############
-@app.route('/api/org')
-def get_org_basic_info():
-  """ Returns basic or complete info from the organization
-  """
-  org = request.args.get('org', '')
-  get_all = request.args.get('info', False)
-  since = request.args.get('since', None)
-  until = request.args.get('until', None)
-  if get_all:
-    return flask.jsonify(GitHub_utils.get_all_info(org, since, until))
-  else:
-    return flask.jsonify(GitHub_utils.get_org_basic_info(org))
+def github_oauth(code):
+    """ Fetch and return user token
+    """
+    params = {}
+    params['client_id'] = app.github.get('client_id')
+    params['client_secret'] = app.github.get('client_secret')
+    params['code'] = code
 
-@app.route('/api/org/repos')
-def get_org_repos():
-  """Return a JSON file with the repositories of the organization
-  """
-  org = request.args.get('org', '')
-  return flask.jsonify(GitHub_utils.get_org_repos(org))
+    headers={'Accept': 'application/json'}
 
-@app.route('/api/org/members')
-def get_org_members():
-  """ Returns a JSON file with the members of the organization
-  """
-  org = request.args.get('org', '')
-  return flask.jsonify(GitHub_utils.get_org_members(org))
+    gh_oauth_get_token = 'https://github.com/login/oauth/access_token'
+    r = requests.post(gh_oauth_get_token, params=params, headers=headers)
+    if r.status_code == requests.codes.OK:
+        return r.json()['access_token']
+    else:
+        return 'unavailable'
 
-@app.route('/api/org/repos/commits', methods=['GET'])
-def get_org_total_commits():
-  """Return a JSON file with a summary of commits per repository within
+@app.route('/oauth')
+def do_oauth():
+    """ Performs GitHub OAuth2 protocol
+    """
+    token = session.get('token', None)
+    if not token or token=='unavailable':
+        # code parameter will be returned by GitHub in Step 1 of OAuth2 authentication
+        code = request.args.get('code', None)
+        if not code:
+            redirect_uri = 'https://github.com/login/oauth/authorize?client_id={}&scopes=user,repo'.format(app.github.get('client_id'))
+            return redirect(redirect_uri)
+        else:
+            token = github_oauth(code)
+            session['token'] = token
+    return redirect('/')
 
-  the organization
-  """
-  org = request.args.get('org', '')
-  since = request.args.get('since', False)
-  until = request.args.get('until', False)
-  return flask.jsonify(GitHub_utils.get_org_commits(org, since, until))
+@app.route('/token')
+def get_user_token():
+    """ Return user token
+    """
+    return flask.jsonify({'access_token': session.get('token', '')})
 
 ###############
 # controllers #
@@ -72,7 +72,38 @@ def page_not_found(e):
 def index():
     return render_template('index.html')
 
-# launch
-if __name__ == "__main__":
+
+def read_config():
+    """ Will add GitHub credentials depending on the context.
+    """
+    if os.environ.get('CONTEXT', '') == 'HEROKU':
+        app.github = {}
+        app.github['client_id'] = os.environ.get('GH_CLIENT_ID')
+        app.github['client_secret'] = os.environ.get('GH_CLIENT_SECRET')
+    else:
+        example_config = """
+        [GitHub]
+        client_id = <your client id>
+        client_secret = <your client secret>
+        """  
+        config_file = os.path.join(os.environ['HOME'], '.commitatorrc')
+        if os.path.exists(config_file):
+            conf = ConfigParser.SafeConfigParser()
+            conf.read(config_file);
+            try:
+                app.github = {}
+                app.github['client_id'] = conf.get('GitHub', 'client_id')
+                app.github['client_secret'] = conf.get('GitHub', 'client_secret')
+            except (NoSectionError, NoOptionError) as e:
+                print "Malformed configuration file, please follow this structure for " + \
+                "your configuration file, which should be located in $HOME/.commitatorrc:" + '\n' + \
+                example_config
+                raise e
+        else:
+            raise RuntimeError("Please create a ~/.commitatorrc configuration file for the application")
+
+if __name__ == "__main__"  :
+    read_config()
     port = int(os.environ.get("PORT", 5000))
+    app.secret_key = os.urandom(24)
     app.run(host='0.0.0.0', port=port)
