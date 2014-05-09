@@ -25,7 +25,7 @@ def github_oauth(code):
 
     gh_oauth_get_token = 'https://github.com/login/oauth/access_token'
     r = requests.post(gh_oauth_get_token, params=params, headers=headers)
-    if r.status_code != requests.codes.OK:
+    if r.status_code == requests.codes.OK:
         return r.json()['access_token']
     else:
         return 'unavailable'
