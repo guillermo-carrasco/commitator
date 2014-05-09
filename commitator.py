@@ -7,6 +7,36 @@ import flask
 from ConfigParser import NoSectionError, NoOptionError
 from flask import Flask, Response, render_template, send_from_directory, request, session, redirect
 
+def read_config():
+    """ Will add GitHub credentials depending on the context.
+    """
+    if os.environ.get('CONTEXT', '') == 'HEROKU':
+        app.github = {}
+        app.github['client_id'] = os.environ.get('GH_CLIENT_ID')
+        app.github['client_secret'] = os.environ.get('GH_CLIENT_SECRET')
+    else:
+        example_config = """
+        [GitHub]
+        client_id = <your client id>
+        client_secret = <your client secret>
+        """  
+        config_file = os.path.join(os.environ['HOME'], '.commitatorrc')
+        if os.path.exists(config_file):
+            conf = ConfigParser.SafeConfigParser()
+            conf.read(config_file);
+            try:
+                app.github = {}
+                app.github['client_id'] = conf.get('GitHub', 'client_id')
+                app.github['client_secret'] = conf.get('GitHub', 'client_secret')
+            except (NoSectionError, NoOptionError) as e:
+                print "Malformed configuration file, please follow this structure for " + \
+                "your configuration file, which should be located in $HOME/.commitatorrc:" + '\n' + \
+                example_config
+                raise e
+        else:
+            raise RuntimeError("Please create a ~/.commitatorrc configuration file for the application")
+    app.secret_key = os.urandom(24)
+
 # App initialization
 app = Flask(__name__, static_url_path='/static')
 app.config.update(
@@ -70,40 +100,6 @@ def page_not_found(e):
 
 @app.route("/")
 def index():
+    if not hasattr(app, 'github'):
+        read_config()
     return render_template('index.html')
-
-
-def read_config():
-    """ Will add GitHub credentials depending on the context.
-    """
-    if os.environ.get('CONTEXT', '') == 'HEROKU':
-        app.github = {}
-        app.github['client_id'] = os.environ.get('GH_CLIENT_ID')
-        app.github['client_secret'] = os.environ.get('GH_CLIENT_SECRET')
-    else:
-        example_config = """
-        [GitHub]
-        client_id = <your client id>
-        client_secret = <your client secret>
-        """  
-        config_file = os.path.join(os.environ['HOME'], '.commitatorrc')
-        if os.path.exists(config_file):
-            conf = ConfigParser.SafeConfigParser()
-            conf.read(config_file);
-            try:
-                app.github = {}
-                app.github['client_id'] = conf.get('GitHub', 'client_id')
-                app.github['client_secret'] = conf.get('GitHub', 'client_secret')
-            except (NoSectionError, NoOptionError) as e:
-                print "Malformed configuration file, please follow this structure for " + \
-                "your configuration file, which should be located in $HOME/.commitatorrc:" + '\n' + \
-                example_config
-                raise e
-        else:
-            raise RuntimeError("Please create a ~/.commitatorrc configuration file for the application")
-
-if __name__ == "__main__"  :
-    read_config()
-    port = int(os.environ.get("PORT", 5000))
-    app.secret_key = os.urandom(24)
-    app.run(host='0.0.0.0', port=port)
