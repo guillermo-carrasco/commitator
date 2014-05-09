@@ -61,7 +61,7 @@ function update_all() {
 
 function getRequestJSON(full_path, params) {
   params = params || {};
-  params['access_token'] = '';
+  params['access_token'] = $.cookie('token');
   return $.getJSON(full_path, params);
 }
 
@@ -176,7 +176,7 @@ function update_org_table(org, org_basic_info, org_members) {
   }
 
   if (org_basic_info['email']) {
-    h.textContent = th.textContent + ' - ' + org_basic_info['email'];
+    th.textContent = th.textContent + ' - ' + org_basic_info['email'];
   }
 
   tr.appendChild(th);
@@ -268,8 +268,7 @@ function update_global_commits_per_user(since, until, org_repos) {
     var h = document.getElementById("h_commits_per_user");
     h.textContent = content;
   }
-
-}
+};
 
 
 ///////////////////////
@@ -297,7 +296,7 @@ function build_discrete_bar_chart(chart_id, data) {
 
     return chart;
   });
-}
+};
 
 //Datarange picker
 $('#reportrange').daterangepicker(
@@ -334,4 +333,29 @@ $("#org_form").submit( function(e) {
 $("#org_field").keyup(function(e){
   $("#org_field_div").removeClass('has-error');
   $('#org_field').popover('hide');
+});
+
+$("#authorize_button").click(function(event){
+    // Will just execute the first step authentication of GitHub OAuth
+    var w = window.location.replace('/oauth');
+});
+
+$(document).ready(function(){
+  $.getJSON('/token', function(data){
+    console.log(data);
+    if (data['access_token']) {
+      if (data['access_token'] != 'unavailable') {
+        $.cookie('token', data['access_token']);
+        $("#authorize_button").remove();
+        $("#reportrange_container").css('display', 'block');
+      }
+      else {
+        alert("There was some problem retrieving your access token, please try it again later.");
+        $("#authorize_container").css('display', 'block');
+      }
+    }
+    else {
+      $("#authorize_container").css('display', 'block');
+    }
+  });
 });
