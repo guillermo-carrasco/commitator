@@ -337,13 +337,13 @@ $("#org_field").keyup(function(e){
 
 $("#authorize_button").click(function(event){
     // Will just execute the first step authentication of GitHub OAuth
-    var w = window.location.replace('/api/user/oauth');
+    var w = window.location.replace('/oauth');
 });
 
 $(document).ready(function(){
-  $.getJSON('/api/user/token', function(data){
-    if (data['user_token']) {
-      $.cookie('token', data['user_token']);
+  $.getJSON('/token', function(data){
+    if (data['access_token']) {
+      $.cookie('token', data['access_token']);
       $("#authorize_button").remove();
       $("#reportrange_container").css('display', 'block');
     }
