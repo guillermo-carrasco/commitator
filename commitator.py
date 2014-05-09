@@ -53,7 +53,7 @@ def get_org_total_commits():
   until = request.args.get('until', False)
   return flask.jsonify(GitHub_utils.get_org_commits(org, since, until))
 
-@app.route('/api/user/auth')
+@app.route('/api/user/oauth')
 def do_oauth():
     """ Performs GitHub OAuth2 protocol
     """
@@ -75,7 +75,7 @@ def do_oauth():
 def get_user_token():
     """ Return user token
     """
-    return flask.jsonify({'user_token': session['token']})
+    return flask.jsonify({'user_token': session.get('token', '')})
 
 ###############
 # controllers #
