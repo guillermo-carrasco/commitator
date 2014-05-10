@@ -54,7 +54,7 @@ function update_all() {
         update_org_table(org, org_info, org_members);
         update_global_commits_per_repo(aggregated_data.weekly_commits_by_repo, since, until);
         update_global_commits_per_user(aggregated_data.weekly_commits_by_author, since, until);
-        //update_weekly_commits_per_user(org, org_repos_with_contributors);
+        update_weekly_commits_per_user(aggregated_data.weekly_commits_by_author);
       }
     });
   } else {
@@ -71,8 +71,8 @@ function aggregate_repo_data(org_repos, since, until) {
   until_timestamp = until.getTime()/1000;
 
   for (var i = 0; i < org_repos.length; i++) {
-    repo_name = org_repos[i]['name']
-    weekly_commits_by_repo[repo_name] = {}
+    repo_name = org_repos[i]['name'];
+    weekly_commits_by_repo[repo_name] = {};
 
     for (var j = 0; j < org_repos[i]['contributors'].length; j++) {
       author_repo_contributions = org_repos[i]['contributors'][j];
@@ -100,8 +100,30 @@ function aggregate_repo_data(org_repos, since, until) {
       }
     }
   }
-  return {'weekly_commits_by_author': weekly_commits_by_author,
-          'weekly_commits_by_repo': weekly_commits_by_repo};
+
+  // Remove authors with 0 contributions in period
+  filtered_weekly_commits_by_author = {};
+  $.each(weekly_commits_by_author, function(author, commits_by_week) {
+    $.each(commits_by_week, function(week, commits) {
+      if (commits) {
+        debugger;
+        filtered_weekly_commits_by_author[author] = weekly_commits_by_author[author];
+      }
+    });
+  });
+
+  // Remove repos with 0 contributions in period
+  filtered_weekly_commits_by_repo = {};
+  $.each(weekly_commits_by_repo, function(repo, commits_by_week) {
+    $.each(commits_by_week, function(week, commits) {
+      if (commits) {
+        filtered_weekly_commits_by_repo[repo] = weekly_commits_by_repo[repo];
+      }
+    });
+  });
+  debugger;
+  return {'weekly_commits_by_author': filtered_weekly_commits_by_author,
+          'weekly_commits_by_repo': filtered_weekly_commits_by_repo};
 }
 
 function getRequestJSON(full_path, params) {
@@ -308,17 +330,18 @@ function update_global_commits_per_user(weekly_commits_by_author, since, until) 
   var content = "Number of commits per user (" +
         since.toDateString() + " - " + until.toDateString() + ')';
 
+  var h;
   if (!document.getElementById("h_commits_per_user")) {
-    var h = "<h3 id=\"h_commits_per_user\">" + content + "</h3>";
+    h = "<h3 id=\"h_commits_per_user\">" + content + "</h3>";
     $("#commits_per_user_chart").prepend(h);
   }
   else {
-    var h = document.getElementById("h_commits_per_user");
+    h = document.getElementById("h_commits_per_user");
     h.textContent = content;
   }
-};
+}
 
-function update_weekly_commits_per_user(org, org_repos) {
+function update_weekly_commits_per_user(weekly_commits_by_author) {
   //Prepare the data for the nvd3 plot
 
   chart_data = [];
@@ -360,7 +383,7 @@ function build_discrete_bar_chart(chart_id, data) {
 
     return chart;
   });
-};
+}
 
 function build_date_line_chart(chart_id, data) {
   nv.addGraph(function() {
@@ -426,7 +449,6 @@ $("#authorize_button").click(function(event){
 
 $(document).ready(function(){
   $.getJSON('/token', function(data){
-    console.log(data);
     if (data['access_token']) {
       if (data['access_token'] != 'unavailable') {
         $.cookie('token', data['access_token']);
