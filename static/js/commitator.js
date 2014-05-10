@@ -192,7 +192,7 @@ function get_org_repos(org) {
 
 function get_org_repos_with_contributors(org) {
   return get_org_repos(org).then(function (repos) {
-    return get_org_contributor_stats_for_repos(org, repos);
+    return get_org_contributor_stats_for_repos(org, repos || []);
   });
 }
 
@@ -363,6 +363,7 @@ function update_weekly_commits_per_user(weekly_commits_by_author) {
 ///////////////////////
 
 function build_discrete_bar_chart(chart_id, data) {
+  d3.select('#' + chart_id + ' svg').select('.nvd3').remove();
   nv.addGraph(function() {
     var chart = nv.models.discreteBarChart()
       .x(function(d) { return d.label; })
@@ -380,12 +381,12 @@ function build_discrete_bar_chart(chart_id, data) {
       .attr('style', 'height:600');
 
     nv.utils.windowResize(chart.update);
-
     return chart;
   });
 }
 
 function build_date_line_chart(chart_id, data) {
+  d3.select('#' + chart_id + ' svg').select('.nvd3').remove();
   nv.addGraph(function() {
     var chart = nv.models.lineChart().useInteractiveGuideline(true);
 
