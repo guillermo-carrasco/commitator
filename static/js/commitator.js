@@ -135,24 +135,28 @@ function iterate(full_path, params, results, def) {
   var req = getRequestJSON(full_path, params);
 
   req.done(function (data, textStatus, jqXHR) {
-    results.push.apply(results, data);
-
-    var links = (jqXHR.getResponseHeader('link') || '').split(/\s*,\s*/g);
-    var next = '';
-    for (var i = 0; i < links.length; i++) {
-      if (links[i].indexOf('rel="next"') !=-1) {
-        next = /<(.*)>/.exec(links[i])[1];
-        break;
-      }
-    }
-
-    if (!next) {
-      if (results.length)
-        def.resolve(results);
-      else
-        def.resolve(data);
+    if (jqXHR.status == 202) {
+      window.setTimeout(iterate, 500, full_path, params, results, def);
     } else {
-      iterate(next, params, results, def);
+      results.push.apply(results, data);
+
+      var links = (jqXHR.getResponseHeader('link') || '').split(/\s*,\s*/g);
+      var next = '';
+      for (var i = 0; i < links.length; i++) {
+        if (links[i].indexOf('rel="next"') !=-1) {
+          next = /<(.*)>/.exec(links[i])[1];
+          break;
+        }
+      }
+
+      if (!next) {
+        if (results.length)
+          def.resolve(results);
+        else
+          def.resolve(data);
+      } else {
+        iterate(next, params, results, def);
+      }
     }
   });
 
@@ -252,12 +256,12 @@ function update_org_table(org, org_basic_info, org_members) {
   // Create table contents
   body = document.createElement('tbody');
   created_at = new Date(org_basic_info['created_at']);
+  if (org_basic_info['blog'])
+    add_row(body, "Web", org_basic_info['blog']);
+
   add_row(body, "Created", created_at.toDateString());
   add_row(body, "Number of public repositories", org_basic_info['public_repos']);
   add_row(body, "Number of public members", org_members.length);
-
-  if (org_basic_info['blog'])
-    add_row(body, "Web", org_basic_info['blog']);
 
   t.appendChild(body);
 
