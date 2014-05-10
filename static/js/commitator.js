@@ -342,7 +342,6 @@ $("#authorize_button").click(function(event){
 
 $(document).ready(function(){
   $.getJSON('/token', function(data){
-    console.log(data);
     if (data['access_token']) {
       if (data['access_token'] != 'unavailable') {
         $.cookie('token', data['access_token']);
