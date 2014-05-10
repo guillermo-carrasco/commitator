@@ -106,7 +106,6 @@ function aggregate_repo_data(org_repos, since, until) {
   $.each(weekly_commits_by_author, function(author, commits_by_week) {
     $.each(commits_by_week, function(week, commits) {
       if (commits) {
-        debugger;
         filtered_weekly_commits_by_author[author] = weekly_commits_by_author[author];
       }
     });
@@ -121,7 +120,7 @@ function aggregate_repo_data(org_repos, since, until) {
       }
     });
   });
-  debugger;
+
   return {'weekly_commits_by_author': filtered_weekly_commits_by_author,
           'weekly_commits_by_repo': filtered_weekly_commits_by_repo};
 }
