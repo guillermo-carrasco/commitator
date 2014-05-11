@@ -353,8 +353,8 @@ function update_global_commits_per_repo(weekly_commits_by_repo, since, until) {
   $.each(total_commits_by_repo, function(repo, total_commits) {
     if (total_commits) {
       var value = {};
-      value['label'] = repo;
-      value['value'] = total_commits;
+      value['x'] = repo;
+      value['y'] = total_commits;
       chart_data['values'].push(value);
     }
   });
@@ -380,7 +380,7 @@ function update_global_commits_per_user(weekly_contributions_by_author, since, u
   //Prepare the data for the nvd3 plot
   total_contributions_by_author = {};
   $.each(weekly_contributions_by_author, function(author, commits_by_week) {
-    total = {'commits': 0, 'additions': 0, 'commits': 0};
+    total = {'commits': 0, 'additions': 0, 'deletions': 0};
     $.each(commits_by_week, function(week, contributions) {
       total['commits'] += contributions['commits'];
       total['additions'] += contributions['additions'];
@@ -395,8 +395,8 @@ function update_global_commits_per_user(weekly_contributions_by_author, since, u
   $.each(total_contributions_by_author, function(author, contributions) {
     if (contributions['commits']) {
       var value = {};
-      value['label'] = author;
-      value['value'] = contributions['commits'];
+      value['x'] = author;
+      value['y'] = contributions['commits'];
       commits_data['values'].push(value);
     }
   });
@@ -509,14 +509,14 @@ function build_multi_bar_chart(chart_id, data) {
 function build_discrete_bar_chart(chart_id, data) {
   d3.select('#' + chart_id + ' svg').select('.nvd3').remove();
 
-  // data[0].values = data[0].values.sort(function(a, b) {
-  //   return d3.descending(a.value, b.value);
-  // });
+  data[0].values = data[0].values.sort(function(a, b) {
+    return d3.descending(a.y, b.y);
+  });
 
   nv.addGraph(function() {
     var chart = nv.models.discreteBarChart()
-      .x(function(d) { return d.label; })
-      .y(function(d) { return d.value; })
+      .x(function(d) { return d.x; })
+      .y(function(d) { return d.y; })
       .staggerLabels(true)
       .showValues(true)
       .height(600)
