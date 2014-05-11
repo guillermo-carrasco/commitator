@@ -21,6 +21,51 @@ myApp = myApp || (function () {
 //  Update info methods  //
 ///////////////////////////
 
+function generate_data() {
+  return stream_layers(3,10+Math.random()*100,.1).map(function(data, i) {
+    return {
+      key: 'Stream' + i,
+      values: data
+    };
+  });
+}
+
+/* Inspired by Lee Byron's test data generator. */
+function stream_layers(n, m, o) {
+  if (arguments.length < 3) o = 0;
+  function bump(a) {
+    var x = 1 / (.1 + Math.random()),
+        y = 2 * Math.random() - .5,
+        z = 10 / (.1 + Math.random());
+    for (var i = 0; i < m; i++) {
+      var w = (i / m - y) * z;
+      a[i] += x * Math.exp(-w * w);
+    }
+  }
+  return d3.range(n).map(function() {
+      var a = [], i;
+      for (i = 0; i < m; i++) a[i] = o + o * Math.random();
+      for (i = 0; i < 5; i++) bump(a);
+      return a.map(stream_index);
+    });
+}
+
+/* Another layer generator using gamma distributions. */
+function stream_waves(n, m) {
+  return d3.range(n).map(function(i) {
+    return d3.range(m).map(function(j) {
+        var x = 20 * j / m - i / 3;
+        return 2 * x * Math.exp(-.5 * x);
+      }).map(stream_index);
+    });
+}
+
+function stream_index(d, i) {
+  return {x: i, y: Math.max(0, d)};
+}
+
+
+
 function update_all() {
   var org = document.getElementById('org_field').value;
   if (org) {
@@ -58,8 +103,9 @@ function update_all() {
 
         update_org_table(org, org_info, org_members);
         update_global_commits_per_repo(aggregated_data.weekly_commits_by_repo, since, until);
-        update_global_commits_per_user(aggregated_data.weekly_commits_by_author, since, until);
-        update_weekly_commits_per_user(aggregated_data.weekly_commits_by_author);
+        update_global_commits_per_user(aggregated_data.weekly_contributions_by_author, since, until);
+        update_global_contributions_per_users(aggregated_data.weekly_contributions_by_author, since, until);
+        update_weekly_commits_per_user(aggregated_data.weekly_contributions_by_author);
       }
     });
   } else {
@@ -69,7 +115,7 @@ function update_all() {
 }
 
 function aggregate_repo_data(org_repos, since, until, only_nonforked_repos, only_org_members, org_members) {
-  weekly_commits_by_author = {};
+  weekly_contributions_by_author = {};
   weekly_commits_by_repo = {};
 
   since_timestamp = since.getTime()/1000;
@@ -98,23 +144,26 @@ function aggregate_repo_data(org_repos, since, until, only_nonforked_repos, only
       if (only_org_members && !org_members_dict[author_login]) {
         continue;
       }
-      if (!weekly_commits_by_author[author_login])
-        weekly_commits_by_author[author_login] = {};
+      if (!weekly_contributions_by_author[author_login])
+        weekly_contributions_by_author[author_login] = {};
 
       for (var k = 0; k < author_repo_contributions['weeks'].length; k++) {
         week_contributions = author_repo_contributions['weeks'][k];
         week = parseInt(week_contributions['w']);
 
         if (week >= since_timestamp && week < until_timestamp) {
-          if (!weekly_commits_by_author[author_login][week]) {
-            weekly_commits_by_author[author_login][week] = 0;
+          if (!weekly_contributions_by_author[author_login][week]) {
+            weekly_contributions_by_author[author_login][week] = {'commits': 0, 'additions': 0, 'deletions': 0};
           }
 
           if (!weekly_commits_by_repo[repo_name][week]) {
             weekly_commits_by_repo[repo_name][week] = 0;
           }
 
-          weekly_commits_by_author[author_login][week] += week_contributions['c'];
+          weekly_contributions_by_author[author_login][week]['commits'] += week_contributions['c'];
+          weekly_contributions_by_author[author_login][week]['additions'] += week_contributions['a'];
+          weekly_contributions_by_author[author_login][week]['deletions'] += week_contributions['d'];
+
           weekly_commits_by_repo[repo_name][week] += week_contributions['c'];
         }
       }
@@ -122,11 +171,11 @@ function aggregate_repo_data(org_repos, since, until, only_nonforked_repos, only
   }
 
   // Remove authors with 0 contributions in period
-  filtered_weekly_commits_by_author = {};
-  $.each(weekly_commits_by_author, function(author, commits_by_week) {
-    $.each(commits_by_week, function(week, commits) {
-      if (commits) {
-        filtered_weekly_commits_by_author[author] = weekly_commits_by_author[author];
+  filtered_weekly_contributions_by_author = {};
+  $.each(weekly_contributions_by_author, function(author, contributions_by_week) {
+    $.each(contributions_by_week, function(week, contributions) {
+      if (contributions['commits']) {
+        filtered_weekly_contributions_by_author[author] = weekly_contributions_by_author[author];
       }
     });
   });
@@ -141,7 +190,7 @@ function aggregate_repo_data(org_repos, since, until, only_nonforked_repos, only
     });
   });
 
-  return {'weekly_commits_by_author': filtered_weekly_commits_by_author,
+  return {'weekly_contributions_by_author': filtered_weekly_contributions_by_author,
           'weekly_commits_by_repo': filtered_weekly_commits_by_repo};
 }
 
@@ -327,29 +376,32 @@ function update_global_commits_per_repo(weekly_commits_by_repo, since, until) {
 }
 
 //Updates the chart representing commits per user
-function update_global_commits_per_user(weekly_commits_by_author, since, until) {
+function update_global_commits_per_user(weekly_contributions_by_author, since, until) {
   //Prepare the data for the nvd3 plot
-  total_commits_by_author = {};
-  $.each(weekly_commits_by_author, function(author, commits_by_week) {
-    total = 0;
-    $.each(commits_by_week, function(week, commits) {
-      total += commits;
+  total_contributions_by_author = {};
+  $.each(weekly_contributions_by_author, function(author, commits_by_week) {
+    total = {'commits': 0, 'additions': 0, 'commits': 0};
+    $.each(commits_by_week, function(week, contributions) {
+      total['commits'] += contributions['commits'];
+      total['additions'] += contributions['additions'];
+      total['deletions'] += contributions['deletions'];
     });
 
-    total_commits_by_author[author] = total;
+    total_contributions_by_author[author] = total;
   });
 
-  chart_data = {'key': 'Total commits per user', 'values': []};
-  $.each(total_commits_by_author, function(author, num_commits) {
-    if (num_commits) {
+
+  commits_data = {'key': 'Commits', 'values': []};
+  $.each(total_contributions_by_author, function(author, contributions) {
+    if (contributions['commits']) {
       var value = {};
       value['label'] = author;
-      value['value'] = num_commits;
-      chart_data['values'].push(value);
+      value['value'] = contributions['commits'];
+      commits_data['values'].push(value);
     }
   });
 
-  build_discrete_bar_chart('commits_per_user_chart', [chart_data]);
+  build_discrete_bar_chart('commits_per_user_chart', [commits_data]);
 
   var content = "Number of commits per user (" +
         since.toDateString() + " - " + until.toDateString() + ')';
@@ -365,14 +417,59 @@ function update_global_commits_per_user(weekly_commits_by_author, since, until) 
   }
 }
 
-function update_weekly_commits_per_user(weekly_commits_by_author) {
+function update_global_contributions_per_users(weekly_contributions_by_author, since, until) {
+  //Prepare the data for the nvd3 plot
+  total_contributions_by_author = {};
+  $.each(weekly_contributions_by_author, function(author, commits_by_week) {
+    total = {'additions': 0, 'deletions': 0};
+    $.each(commits_by_week, function(week, contributions) {
+      total['additions'] += contributions['additions'];
+      total['deletions'] += contributions['deletions'];
+    });
+
+    total_contributions_by_author[author] = total;
+  });
+
+  additions_data = {'key': 'Additions', 'values': []};
+  $.each(total_contributions_by_author, function(author, contributions) {
+    var value = {};
+    value['x'] = author;
+    value['y'] = contributions['additions'];
+    additions_data['values'].push(value);
+  });
+
+  deletions_data = {'key': 'Deletions', 'values': []};
+  $.each(total_contributions_by_author, function(author, contributions) {
+    var value = {};
+    value['x'] = author;
+    value['y'] = contributions['deletions'];
+    deletions_data['values'].push(value);
+  });
+
+  build_multi_bar_chart('contributions_per_user_chart', [additions_data, deletions_data]);
+
+  var content = "Number of contributions per user (" +
+        since.toDateString() + " - " + until.toDateString() + ')';
+
+  var h;
+  if (!document.getElementById("h_contributions_per_user")) {
+    h = "<h3 id=\"h_contributions_per_user\">" + content + "</h3>";
+    $("#contributions_per_user_chart").prepend(h);
+  }
+  else {
+    h = document.getElementById("h_contributions_per_user");
+    h.textContent = content;
+  }
+}
+
+function update_weekly_commits_per_user(weekly_contributions_by_author) {
   //Prepare the data for the nvd3 plot
 
   chart_data = [];
-  $.each(weekly_commits_by_author, function(author, weekly_commits) {
+  $.each(weekly_contributions_by_author, function(author, weekly_commits) {
     author_data = [];
-    $.each(weekly_commits, function(week, num_commits) {
-      author_data.push({x: week*1000, y: num_commits});
+    $.each(weekly_commits, function(week, contributions) {
+      author_data.push({x: week*1000, y: contributions['commits']});
     });
 
     chart_data.push({values: author_data, key: author});
@@ -386,8 +483,36 @@ function update_weekly_commits_per_user(weekly_commits_by_author) {
 //  Drawing methods  //
 ///////////////////////
 
+function sort_function(a, b) {
+  return a.value - b.value;
+}
+
+function build_multi_bar_chart(chart_id, data) {
+  nv.addGraph(function() {
+    var chart = nv.models.multiBarChart()
+      .transitionDuration(350)
+      .height(600)
+      .showControls(true)   //Allow user to switch between 'Grouped' and 'Stacked' mode.
+      .groupSpacing(0.1);    //Distance between each group of bars.
+
+    d3.select('#' + chart_id + ' svg')
+        .datum(data)
+        .transition().duration(800)
+        .attr('style', 'height:600')
+        .call(chart);
+
+    nv.utils.windowResize(chart.update);
+    return chart;
+  });
+}
+
 function build_discrete_bar_chart(chart_id, data) {
   d3.select('#' + chart_id + ' svg').select('.nvd3').remove();
+
+  // data[0].values = data[0].values.sort(function(a, b) {
+  //   return d3.descending(a.value, b.value);
+  // });
+
   nv.addGraph(function() {
     var chart = nv.models.discreteBarChart()
       .x(function(d) { return d.label; })
@@ -416,6 +541,7 @@ function build_date_line_chart(chart_id, data) {
 
     chart.xAxis
       .showMaxMin(false)
+      .height(600)
       .tickFormat(function(d) { return d3.time.format('%x')(new Date(d)); });
 
     d3.select('#' + chart_id + ' svg')
