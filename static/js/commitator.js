@@ -49,7 +49,12 @@ function update_all() {
       } else {
         $("#welcome").slideUp();
 
-        aggregated_data = aggregate_repo_data(org_repos_with_contributors, since, until);
+        only_nonforked_repos = true;
+        only_org_members = false;
+
+        aggregated_data = aggregate_repo_data(org_repos_with_contributors, since, until,
+                                              only_nonforked_repos, only_org_members,
+                                              org_members);
 
         update_org_table(org, org_info, org_members);
         update_global_commits_per_repo(aggregated_data.weekly_commits_by_repo, since, until);
@@ -63,14 +68,26 @@ function update_all() {
   }
 }
 
-function aggregate_repo_data(org_repos, since, until) {
+function aggregate_repo_data(org_repos, since, until, only_nonforked_repos, only_org_members, org_members) {
   weekly_commits_by_author = {};
   weekly_commits_by_repo = {};
 
   since_timestamp = since.getTime()/1000;
   until_timestamp = until.getTime()/1000;
 
+
+  org_members_dict = {};
+  if (only_org_members) {
+    for (var i = 0; i < org_members.length; i++) {
+      org_members_dict[org_members[i]['login']] = true;
+    }
+  }
+
   for (var i = 0; i < org_repos.length; i++) {
+
+    if (only_nonforked_repos && org_repos[i]['fork'])
+      continue;
+
     repo_name = org_repos[i]['name'];
     weekly_commits_by_repo[repo_name] = {};
 
@@ -78,6 +95,9 @@ function aggregate_repo_data(org_repos, since, until) {
       author_repo_contributions = org_repos[i]['contributors'][j];
       author_login = author_repo_contributions['author']['login'];
 
+      if (only_org_members && !org_members_dict[author_login]) {
+        continue;
+      }
       if (!weekly_commits_by_author[author_login])
         weekly_commits_by_author[author_login] = {};
 
@@ -256,10 +276,11 @@ function update_org_table(org, org_basic_info, org_members) {
   // Create table contents
   body = document.createElement('tbody');
   created_at = new Date(org_basic_info['created_at']);
+  add_row(body, "Created", created_at.toDateString());
+
   if (org_basic_info['blog'])
     add_row(body, "Web", org_basic_info['blog']);
 
-  add_row(body, "Created", created_at.toDateString());
   add_row(body, "Number of public repositories", org_basic_info['public_repos']);
   add_row(body, "Number of public members", org_members.length);
 
@@ -351,7 +372,7 @@ function update_weekly_commits_per_user(weekly_commits_by_author) {
   $.each(weekly_commits_by_author, function(author, weekly_commits) {
     author_data = [];
     $.each(weekly_commits, function(week, num_commits) {
-      author_data.push({x: week, y: num_commits});
+      author_data.push({x: week*1000, y: num_commits});
     });
 
     chart_data.push({values: author_data, key: author});
