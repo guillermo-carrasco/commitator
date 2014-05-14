@@ -23,9 +23,8 @@ myApp = myApp || (function () {
 
 function update_all() {
   var org = document.getElementById('org_field').value;
+
   if (org) {
-    // Pick up the data from the datarange widget. If no value (<span> starts with
-    // Pick...), then by default get the last 7 days
     var datarange = $('#reportrange span')[0];
     var since = new Date();
     var until = new Date();

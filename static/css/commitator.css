@@ -11,3 +11,12 @@ div .plot-holder {
     padding-left: 10px;
     padding-right: 10px;
 }
+
+.centered {
+    text-align: center;
+}
+
+.btn-token {
+    margin-top: 40px;
+}
+
