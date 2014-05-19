@@ -69,7 +69,7 @@ def do_oauth():
         # code parameter will be returned by GitHub in Step 1 of OAuth2 authentication
         code = request.args.get('code', None)
         if not code:
-            redirect_uri = 'https://github.com/login/oauth/authorize?client_id=6890f5104083b7191205&scope=repo'.format(app.github.get('client_id'))
+            redirect_uri = 'https://github.com/login/oauth/authorize?client_id={}&scope=repo'.format(app.github.get('client_id'))
             return redirect(redirect_uri)
         else:
             token = github_oauth(code)
