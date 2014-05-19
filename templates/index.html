@@ -34,32 +34,33 @@
   </div>
   <div class="col-md-2"></div>
 </div>
-<hr />
 
-<!-- Organization table -->
-<div class="col-md-12">
-  <table class="table table-bordered" id="org_table">
-  </table>
-</div>
+<div id="graphs_container">
+  <!-- Organization table -->
+  <div class="col-md-12">
+      <table class="table table-bordered" id="org_table">
+      </table>
+  </div>
 
-<!-- Total commits per repository graph -->
-<div id='commits_per_repo_chart'>
-  <svg></svg>
-</div>
+  <!-- Total commits per repository graph -->
+  <div id='commits_per_repo_chart' class="plot-holder">
+    <svg></svg>
+  </div>
 
-<!-- Total commits per user graph -->
-<div id='commits_per_user_chart'>
-  <svg></svg>
-</div>
+  <!-- Total commits per user graph -->
+  <div id='commits_per_user_chart' class="plot-holder">
+    <svg></svg>
+  </div>
 
-<!-- Total contributions per user graph -->
-<div id='contributions_per_user_chart'>
-  <svg></svg>
-</div>
+  <!-- Total contributions per user graph -->
+  <div id='contributions_per_user_chart'>
+    <svg></svg>
+  </div>
 
-<!-- Weekly commits per user graph -->
-<div id='weekly_commits_per_user'>
-  <svg></svg>
+  <!-- Weekly commits per user graph -->
+  <div id='weekly_commits_per_user'>
+    <svg></svg>
+  </div>
 </div>
 
 {% endblock %}

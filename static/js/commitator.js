@@ -321,7 +321,7 @@ function update_global_commits_per_repo(weekly_commits_by_repo, since, until) {
   var h = '';
   if (!document.getElementById("h_commits_per_repo")) {
     h = "<h3 id=\"h_commits_per_repo\">" + content + "</h3>";
-    $("#commits_per_repo_chart").prepend(h);
+    $("#commits_per_repo_chart").before(h);
   }
   else {
     h = document.getElementById("h_commits_per_repo");
@@ -363,7 +363,7 @@ function update_global_commits_per_user(weekly_contributions_by_author, since, u
   var h;
   if (!document.getElementById("h_commits_per_user")) {
     h = "<h3 id=\"h_commits_per_user\">" + content + "</h3>";
-    $("#commits_per_user_chart").prepend(h);
+    $("#commits_per_user_chart").before(h);
   }
   else {
     h = document.getElementById("h_commits_per_user");
@@ -408,7 +408,7 @@ function update_global_contributions_per_users(weekly_contributions_by_author, s
   var h;
   if (!document.getElementById("h_contributions_per_user")) {
     h = "<h3 id=\"h_contributions_per_user\">" + content + "</h3>";
-    $("#contributions_per_user_chart").prepend(h);
+    $("#contributions_per_user_chart").before(h);
   }
   else {
     h = document.getElementById("h_contributions_per_user");
@@ -441,31 +441,15 @@ function sort_function(a, b) {
   return a.value - b.value;
 }
 
-function build_multi_bar_chart(chart_id, data) {
-  nv.addGraph(function() {
-    var chart = nv.models.multiBarChart()
-      .transitionDuration(350)
-      .height(600)
-      .showControls(true)   //Allow user to switch between 'Grouped' and 'Stacked' mode.
-      .groupSpacing(0.1);    //Distance between each group of bars.
-
-    d3.select('#' + chart_id + ' svg')
-        .datum(data)
-        .transition().duration(800)
-        .attr('style', 'height:600')
-        .call(chart);
-
-    nv.utils.windowResize(chart.update);
-    return chart;
-  });
-}
-
 function build_discrete_bar_chart(chart_id, data) {
   d3.select('#' + chart_id + ' svg').select('.nvd3').remove();
 
   data[0].values = data[0].values.sort(function(a, b) {
     return d3.descending(a.y, b.y);
   });
+
+  var num_bars = data[0].values.length;
+  var width = Math.max(1140, num_bars*100);
 
   nv.addGraph(function() {
     var chart = nv.models.discreteBarChart()
@@ -474,6 +458,7 @@ function build_discrete_bar_chart(chart_id, data) {
       .staggerLabels(true)
       .showValues(true)
       .height(600)
+      .width(width)
       .margin({bottom: 60})
       .valueFormat(d3.format('d'));
 
@@ -481,7 +466,32 @@ function build_discrete_bar_chart(chart_id, data) {
       .datum(data)
       .transition().duration(800)
       .call(chart)
-      .attr('style', 'height:600');
+      .attr('style', 'height:600px')
+      .attr('style', 'width:' + width + 'px');
+
+    nv.utils.windowResize(chart.update);
+    return chart;
+  });
+}
+
+function build_multi_bar_chart(chart_id, data) {
+  data[0].values = data[0].values.sort(function(a, b) {
+    return d3.descending(a.y, b.y);
+  });
+
+  nv.addGraph(function() {
+    var chart = nv.models.multiBarChart()
+      .height(600)
+      .margin({bottom: 60})
+      .reduceXTicks(false)
+      .showControls(true)   //Allow user to switch between 'Grouped' and 'Stacked' mode.
+      .groupSpacing(0.1);    //Distance between each group of bars.
+
+    d3.select('#' + chart_id + ' svg')
+        .datum(data)
+        .transition().duration(800)
+        .attr('style', 'height:600px')
+        .call(chart);
 
     nv.utils.windowResize(chart.update);
     return chart;
@@ -491,18 +501,19 @@ function build_discrete_bar_chart(chart_id, data) {
 function build_date_line_chart(chart_id, data) {
   d3.select('#' + chart_id + ' svg').select('.nvd3').remove();
   nv.addGraph(function() {
-    var chart = nv.models.lineChart().useInteractiveGuideline(true);
+    var chart = nv.models.lineChart()
+      .useInteractiveGuideline(true)
+      .height(600);
 
     chart.xAxis
       .showMaxMin(false)
-      .height(600)
       .tickFormat(function(d) { return d3.time.format('%x')(new Date(d)); });
 
     d3.select('#' + chart_id + ' svg')
       .datum(data)
       .transition().duration(800)
       .call(chart)
-      .attr('style', 'height:600');
+      .attr('style', 'height:600px');
 
     nv.utils.windowResize(chart.update);
     return chart;

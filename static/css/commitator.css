@@ -1,6 +1,7 @@
 /* Horitzontal scroll for a div with a lot of plots */
 div .plot-holder {
     overflow: auto;
+    height: 600px;
 }
 
 .modal-dialog {
@@ -19,4 +20,3 @@ div .plot-holder {
 .btn-token {
     margin-top: 40px;
 }
-
