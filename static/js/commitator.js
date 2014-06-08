@@ -55,11 +55,12 @@ function update_all() {
                                               only_nonforked_repos, only_org_members,
                                               org_members);
 
+        $("#graphs_container").removeClass("hidden");
         update_org_table(org, org_info, org_members);
-        update_global_commits_per_repo(aggregated_data.weekly_commits_by_repo, since, until);
-        update_global_commits_per_user(aggregated_data.weekly_contributions_by_author, since, until);
-        update_global_contributions_per_users(aggregated_data.weekly_contributions_by_author, since, until);
-        update_weekly_commits_per_user(aggregated_data.weekly_contributions_by_author);
+        update_global_commits_per_repo(aggregated_data.total_contributions_by_repo, since, until);
+        update_global_commits_per_user(aggregated_data.total_contributions_by_author, since, until);
+        update_global_contributions_per_users(aggregated_data.total_contributions_by_author, since, until);
+        update_weekly_commits_per_user(aggregated_data.weekly_contributions_by_author, since, until);
       }
     });
   } else {
@@ -70,7 +71,7 @@ function update_all() {
 
 function aggregate_repo_data(org_repos, since, until, only_nonforked_repos, only_org_members, org_members) {
   weekly_contributions_by_author = {};
-  weekly_commits_by_repo = {};
+  weekly_contributions_by_repo = {};
 
   since_timestamp = since.getTime()/1000;
   until_timestamp = until.getTime()/1000;
@@ -89,7 +90,7 @@ function aggregate_repo_data(org_repos, since, until, only_nonforked_repos, only
       continue;
 
     repo_name = org_repos[i]['name'];
-    weekly_commits_by_repo[repo_name] = {};
+    weekly_contributions_by_repo[repo_name] = {};
 
     for (var j = 0; j < org_repos[i]['contributors'].length; j++) {
       author_repo_contributions = org_repos[i]['contributors'][j];
@@ -110,42 +111,62 @@ function aggregate_repo_data(org_repos, since, until, only_nonforked_repos, only
             weekly_contributions_by_author[author_login][week] = {'commits': 0, 'additions': 0, 'deletions': 0};
           }
 
-          if (!weekly_commits_by_repo[repo_name][week]) {
-            weekly_commits_by_repo[repo_name][week] = 0;
+          if (!weekly_contributions_by_repo[repo_name][week]) {
+            weekly_contributions_by_repo[repo_name][week] = {'commits': 0, 'additions': 0, 'deletions': 0};
           }
 
           weekly_contributions_by_author[author_login][week]['commits'] += week_contributions['c'];
           weekly_contributions_by_author[author_login][week]['additions'] += week_contributions['a'];
           weekly_contributions_by_author[author_login][week]['deletions'] += week_contributions['d'];
 
-          weekly_commits_by_repo[repo_name][week] += week_contributions['c'];
+          weekly_contributions_by_repo[repo_name][week]['commits'] += week_contributions['c'];
+          weekly_contributions_by_repo[repo_name][week]['additions'] += week_contributions['a'];
+          weekly_contributions_by_repo[repo_name][week]['deletions'] += week_contributions['d'];
         }
       }
     }
   }
 
-  // Remove authors with 0 contributions in period
-  filtered_weekly_contributions_by_author = {};
-  $.each(weekly_contributions_by_author, function(author, contributions_by_week) {
+  weekly_contributions_by_repo = filter_empty_elements(weekly_contributions_by_repo);
+  weekly_contributions_by_author = filter_empty_elements(weekly_contributions_by_author);
+
+  total_contributions_by_repo = aggregate_contributions(weekly_contributions_by_repo);
+  total_contributions_by_author = aggregate_contributions(weekly_contributions_by_author);
+
+  return {'weekly_contributions_by_author': weekly_contributions_by_author,
+          'weekly_contributions_by_repo': weekly_contributions_by_repo,
+          'total_contributions_by_repo': total_contributions_by_repo,
+          'total_contributions_by_author': total_contributions_by_author};
+}
+
+function filter_empty_elements(weekly_contributions) {
+  filtered_weekly_contributions = {};
+  $.each(weekly_contributions, function(key, contributions_by_week) {
     $.each(contributions_by_week, function(week, contributions) {
       if (contributions['commits']) {
-        filtered_weekly_contributions_by_author[author] = weekly_contributions_by_author[author];
+        filtered_weekly_contributions[key] = weekly_contributions[key];
       }
     });
   });
 
-  // Remove repos with 0 contributions in period
-  filtered_weekly_commits_by_repo = {};
-  $.each(weekly_commits_by_repo, function(repo, commits_by_week) {
-    $.each(commits_by_week, function(week, commits) {
-      if (commits) {
-        filtered_weekly_commits_by_repo[repo] = weekly_commits_by_repo[repo];
-      }
+  return filtered_weekly_contributions;
+}
+
+function aggregate_contributions(weekly_contributions) {
+  total_contributions = {};
+  $.each(weekly_contributions, function(key, contributions_by_week) {
+    total = {'commits': 0, 'additions': 0, 'deletions': 0};
+
+    $.each(contributions_by_week, function(week, contributions) {
+      total['commits'] += contributions['commits'];
+      total['additions'] += contributions['additions'];
+      total['deletions'] += contributions['deletions'];
     });
+
+    total_contributions[key] = total;
   });
 
-  return {'weekly_contributions_by_author': filtered_weekly_contributions_by_author,
-          'weekly_commits_by_repo': filtered_weekly_commits_by_repo};
+  return total_contributions;
 }
 
 function getRequestJSON(full_path, params) {
@@ -288,102 +309,40 @@ function update_org_table(org, org_basic_info, org_members) {
   add_row(body, "Number of public members", org_members.length);
 
   t.appendChild(body);
-
 }
 
-//Updates the chart representing commits per repo
-function update_global_commits_per_repo(weekly_commits_by_repo, since, until) {
-  total_commits_by_repo = {};
-  $.each(weekly_commits_by_repo, function(repo, commits_by_week) {
-    total = 0;
-    $.each(commits_by_week, function(week, commits) {
-      total += commits;
-    });
-
-    total_commits_by_repo[repo] = total;
-  });
-
-  chart_data = {'key': 'Total commits per repository', 'values': []};
-  $.each(total_commits_by_repo, function(repo, total_commits) {
-    if (total_commits) {
-      var value = {};
-      value['x'] = repo;
-      value['y'] = total_commits;
-      chart_data['values'].push(value);
-    }
-  });
+function update_global_commits_per_repo(total_contributions_by_repo, since, until) {
+  chart_data = {'key': 'Total commits per repository'};
+  chart_data['values'] = prepare_global_commits_for_chart(total_contributions_by_repo);
 
   build_discrete_bar_chart('commits_per_repo_chart', [chart_data]);
-
-  var content = "Number of commits per repository (" +
-        since.toDateString() + " - " + until.toDateString() + ')';
-
-  var h = '';
-  if (!document.getElementById("h_commits_per_repo")) {
-    h = "<h3 id=\"h_commits_per_repo\">" + content + "</h3>";
-    $("#commits_per_repo_chart").before(h);
-  }
-  else {
-    h = document.getElementById("h_commits_per_repo");
-    h.textContent = content;
-  }
+  set_chart_title('commits_per_repo_chart', "Number of commits per repository", since, until);
 }
 
-//Updates the chart representing commits per user
-function update_global_commits_per_user(weekly_contributions_by_author, since, until) {
-  //Prepare the data for the nvd3 plot
-  total_contributions_by_author = {};
-  $.each(weekly_contributions_by_author, function(author, commits_by_week) {
-    total = {'commits': 0, 'additions': 0, 'deletions': 0};
-    $.each(commits_by_week, function(week, contributions) {
-      total['commits'] += contributions['commits'];
-      total['additions'] += contributions['additions'];
-      total['deletions'] += contributions['deletions'];
-    });
+function update_global_commits_per_user(total_contributions_by_author, since, until) {
+  chart_data = {'key': 'Commits'};
+  chart_data['values'] = prepare_global_commits_for_chart(total_contributions_by_author);
 
-    total_contributions_by_author[author] = total;
-  });
+  build_discrete_bar_chart('commits_per_user_chart', [chart_data]);
+  set_chart_title('commits_per_user_chart', "Number of commits per user", since, until);
+}
 
+function prepare_global_commits_for_chart(total_contributions) {
+  chart_values = [];
 
-  commits_data = {'key': 'Commits', 'values': []};
-  $.each(total_contributions_by_author, function(author, contributions) {
+  $.each(total_contributions, function(key, contributions) {
     if (contributions['commits']) {
       var value = {};
-      value['x'] = author;
+      value['x'] = key;
       value['y'] = contributions['commits'];
-      commits_data['values'].push(value);
+      chart_values.push(value);
     }
   });
 
-  build_discrete_bar_chart('commits_per_user_chart', [commits_data]);
-
-  var content = "Number of commits per user (" +
-        since.toDateString() + " - " + until.toDateString() + ')';
-
-  var h;
-  if (!document.getElementById("h_commits_per_user")) {
-    h = "<h3 id=\"h_commits_per_user\">" + content + "</h3>";
-    $("#commits_per_user_chart").before(h);
-  }
-  else {
-    h = document.getElementById("h_commits_per_user");
-    h.textContent = content;
-  }
+  return chart_values;
 }
 
-function update_global_contributions_per_users(weekly_contributions_by_author, since, until) {
-  //Prepare the data for the nvd3 plot
-  total_contributions_by_author = {};
-  $.each(weekly_contributions_by_author, function(author, commits_by_week) {
-    total = {'additions': 0, 'deletions': 0};
-    $.each(commits_by_week, function(week, contributions) {
-      total['additions'] += contributions['additions'];
-      total['deletions'] += contributions['deletions'];
-    });
-
-    total_contributions_by_author[author] = total;
-  });
-
+function update_global_contributions_per_users(total_contributions_by_author, since, until) {
   additions_data = {'key': 'Additions', 'values': []};
   $.each(total_contributions_by_author, function(author, contributions) {
     var value = {};
@@ -401,22 +360,10 @@ function update_global_contributions_per_users(weekly_contributions_by_author, s
   });
 
   build_multi_bar_chart('contributions_per_user_chart', [additions_data, deletions_data]);
-
-  var content = "Number of contributions per user (" +
-        since.toDateString() + " - " + until.toDateString() + ')';
-
-  var h;
-  if (!document.getElementById("h_contributions_per_user")) {
-    h = "<h3 id=\"h_contributions_per_user\">" + content + "</h3>";
-    $("#contributions_per_user_chart").before(h);
-  }
-  else {
-    h = document.getElementById("h_contributions_per_user");
-    h.textContent = content;
-  }
+  set_chart_title('contributions_per_user_chart', "Number of contributions per user", since, until);
 }
 
-function update_weekly_commits_per_user(weekly_contributions_by_author) {
+function update_weekly_commits_per_user(weekly_contributions_by_author, since, until) {
   //Prepare the data for the nvd3 plot
 
   chart_data = [];
@@ -430,8 +377,23 @@ function update_weekly_commits_per_user(weekly_contributions_by_author) {
   });
 
   build_date_line_chart('weekly_commits_per_user', chart_data);
+  set_chart_title('weekly_commits_per_user', "Weekly commits per user", since, until);
 }
 
+function set_chart_title(chart_id, title, since, until) {
+  var h;
+  var title_id = 'h_' + chart_id;
+  var content = title + " (" + since.toDateString() + " - " + until.toDateString() + ')';
+
+  if (!document.getElementById(title_id)) {
+    h = "<h3 id=\"" + title_id + "\">" + content + "</h3>";
+    $("#" + chart_id).before(h);
+  }
+  else {
+    h = document.getElementById(title_id);
+    h.textContent = content;
+  }
+}
 
 ///////////////////////
 //  Drawing methods  //
@@ -559,8 +521,8 @@ $("#org_field").keyup(function(e){
 });
 
 $("#authorize_button").click(function(event){
-    // Will just execute the first step authentication of GitHub OAuth
-    var w = window.location.replace('/oauth');
+  // Will just execute the first step authentication of GitHub OAuth
+  var w = window.location.replace('/oauth');
 });
 
 $(document).ready(function(){
